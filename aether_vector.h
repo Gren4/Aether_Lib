@@ -88,4 +88,16 @@ void f_invert_ae_vector(ae_vector *vector, uint8_t *status);
 #define invert_ae_vector(vector) f_invert_ae_vector(vector, NULL)
 #define invert_ae_vector_debug(vector, status) f_invert_ae_vector(vector, status)
 
+size_t f_find_ae_vector(ae_vector *vector, uint8_t *status);
+#define find_ae_vector(ret, vector, type, par) \
+    {                                          \
+        *(type *)vector->io_buffer = par;      \
+        ret = f_find_ae_vector(vector, NULL);  \
+    }
+#define find_ae_vector_debug(ret, vector, type, par, status) \
+    {                                                        \
+        *(type *)vector->io_buffer = par;                    \
+        ret = f_find_ae_vector(vector, status);              \
+    }
+
 #endif /* __AETHER_VECTOR__ */

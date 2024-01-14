@@ -208,7 +208,7 @@ void f_set_ae_map(ae_map *map, uint8_t *str, uint8_t *status)
     }
 }
 
-size_t f_has_key_ae_map(ae_map *map, uint8_t *str, uint8_t *status)
+size_t f_find_key_ae_map(ae_map *map, uint8_t *str, uint8_t *status)
 {
     if (status != NULL)
         *status = AETHER_MAP_ERROR;
@@ -256,7 +256,7 @@ void *f_get_ae_map(ae_map *map, uint8_t *str, uint8_t *status)
         return NULL;
 
     uint8_t temp_status;
-    size_t index = f_has_key_ae_map(map, str, &temp_status);
+    size_t index = f_find_key_ae_map(map, str, &temp_status);
 
     if (temp_status == AETHER_MAP_ERROR)
         return NULL;
@@ -281,7 +281,7 @@ void *f_delete_ae_map(ae_map *map, uint8_t *str, uint8_t *status)
         return NULL;
 
     uint8_t temp_status;
-    size_t index = f_has_key_ae_map(map, str, &temp_status);
+    size_t index = f_find_key_ae_map(map, str, &temp_status);
 
     if (temp_status == AETHER_MAP_ERROR)
         return NULL;
@@ -295,12 +295,12 @@ void *f_delete_ae_map(ae_map *map, uint8_t *str, uint8_t *status)
         return NULL;
 
     memmove(map->io_buffer, par->value, map->value_size);
-    
+
     free(par->key);
     par->key = NULL;
 
     free(par->value);
-    par->value = NULL; 
+    par->value = NULL;
 
     map->occupancy--;
 

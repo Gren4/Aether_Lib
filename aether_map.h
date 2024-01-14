@@ -43,9 +43,12 @@ void f_set_ae_map(ae_map *map, uint8_t *str, uint8_t *status);
         f_set_ae_map(map, key, status);               \
     }
 
-size_t f_has_key_ae_map(ae_map *map, uint8_t *str, uint8_t *status);
-#define has_key_ae_map(map, key) f_has_key_ae_map(map, key, NULL)
-#define has_key_ae_map_debug(map, key, status) f_has_key_ae_map(map, key, status)
+size_t f_find_key_ae_map(ae_map *map, uint8_t *str, uint8_t *status);
+#define find_key_ae_map(map, key) f_find_key_ae_map(map, key, NULL)
+#define find_key_ae_map_debug(map, key, status) f_find_key_ae_map(map, key, status)
+
+#define has_key_ae_map(map, key) (f_find_key_ae_map(map, key, NULL) != map->vector->quantity)
+#define has_key_ae_map_debug(map, key, status) (f_find_key_ae_map(map, key, status) != map->vector->quantity)
 
 void *f_get_ae_map(ae_map *map, uint8_t *str, uint8_t *status);
 #define get_ae_map(map, type, key) *(type *)f_get_ae_map(map, key, NULL)

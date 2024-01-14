@@ -59,7 +59,7 @@ void f_resize_ae_vector(ae_vector *vector, size_t new_size, uint8_t *status)
 
     if (vector->data == NULL)
         return;
-    
+
     if (new_size < 0)
         return;
 
@@ -96,7 +96,7 @@ void f_append_ae_vector(ae_vector *vector, uint8_t *status)
 
     if (vector->data == NULL)
         return;
-    
+
     if ((vector->quantity + 1) % AETHER_VECTOR_ADD_SIZE == 0)
     {
         void *p = realloc(vector->data, ((vector->quantity + 1) + AETHER_VECTOR_ADD_SIZE) * vector->data_size);
@@ -125,7 +125,7 @@ void f_set_ae_vector(ae_vector *vector, size_t i, uint8_t *status)
 
     if (vector->data == NULL)
         return;
-    
+
     if (i < 0 || i >= vector->quantity)
         return;
 
@@ -146,14 +146,13 @@ void *f_get_ae_vector(ae_vector *vector, size_t i, uint8_t *status)
 
     if (vector->data == NULL)
         return NULL;
-    
+
     if (i < 0 || i >= vector->quantity)
         return NULL;
-    
+
     if (status != NULL)
         *status = AETHER_VECTOR_SUCCESS;
     return vector->data + i * vector->data_size;
-    
 }
 
 void f_concat_ae_vector(ae_vector *vector_to, ae_vector *vector_from, uint8_t *status)
@@ -174,13 +173,13 @@ void f_concat_ae_vector(ae_vector *vector_to, ae_vector *vector_from, uint8_t *s
         return;
 
     if (vector_to->data_size != vector_from->data_size)
-        return;        
+        return;
 
     size_t new_size = vector_to->quantity + vector_from->quantity;
     void *p = realloc(vector_to->data, (((new_size / AETHER_VECTOR_ADD_SIZE) + 1) * AETHER_VECTOR_ADD_SIZE) * vector_to->data_size);
     if (p == NULL)
         return;
-    
+
     vector_to->data = p;
 
     memmove(vector_to->data + vector_to->quantity * vector_to->data_size, vector_from->data, vector_from->quantity * vector_to->data_size);
@@ -202,7 +201,7 @@ void f_insert_ae_vector(ae_vector *vector, size_t i, uint8_t *status)
 
     if (vector->data != NULL)
         return;
-        
+
     if ((vector->quantity + 1) % AETHER_VECTOR_ADD_SIZE == 0)
     {
         void *p = realloc(vector->data, ((vector->quantity + 1) + AETHER_VECTOR_ADD_SIZE) * vector->data_size);
@@ -238,7 +237,7 @@ void *f_delete_ae_vector(ae_vector *vector, size_t i, uint8_t *status)
         void *p = realloc(vector->data, ((vector->quantity + 1) + AETHER_VECTOR_ADD_SIZE) * vector->data_size);
         if (p == NULL)
             return NULL;
-        
+
         vector->data = p;
     }
 
@@ -280,10 +279,10 @@ void f_invert_ae_vector(ae_vector *vector, uint8_t *status)
 
     if (vector == NULL)
         return;
-    
+
     if (vector->data == NULL)
         return;
-        
+
     if (vector->quantity > 1)
     {
         size_t iterations = vector->quantity / 2;
@@ -299,4 +298,27 @@ void f_invert_ae_vector(ae_vector *vector, uint8_t *status)
     if (status != NULL)
         *status = AETHER_VECTOR_SUCCESS;
     return;
+}
+
+size_t f_find_ae_vector(ae_vector *vector, uint8_t *status)
+{
+    if (status != NULL)
+        *status = AETHER_VECTOR_ERROR;
+
+    if (vector == NULL)
+        return vector->quantity;
+
+    if (vector->data == NULL)
+        return vector->quantity;
+
+    size_t i = 0;
+    for (i = 0; i < vector->quantity; i++)
+    {
+        if (memcmp(vector->io_buffer, vector->data + i * vector->data_size, vector->data_size) == 0)
+        {
+            return i;
+        }
+    }
+
+    return vector->quantity;
 }
