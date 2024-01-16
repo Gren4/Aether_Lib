@@ -2,42 +2,138 @@
 #include <stdio.h>
 #include <conio.h>
 
+void print_vec(ae_vector *vec)
+{
+    uint8_t buf;
+    size_t i = 0;
+    for (i = 0; i < vec->data.quant; i++)
+    {
+        f_get_ae_vector(vec, i, &buf);
+        printf("%d\n", buf);
+    }
+    printf("\n");
+
+    return;
+}
+
+void print_map(ae_map *map)
+{
+    double buf;
+    uint8_t *key;
+    size_t i = 0;
+
+    ae_vector keys = f_get_keys_ae_map(map);
+
+    for (i = 0; i < keys.data.quant; i++)
+    {
+        f_get_ae_vector(&keys, i, &key);
+        f_get_ae_map(map, key, &buf);
+        printf("%s is %f\n", key, buf);
+    }
+    printf("\n");
+
+    return;
+}
+
 void main(void)
 {
-    ae_map *map = create_ae_map(uint8_t);
-    set_ae_map(map, uint8_t, "Anna", 18);
-    set_ae_map(map, uint8_t, "Josh", 16);
-    set_ae_map(map, uint8_t, "Carl", 22);
-    set_ae_map(map, uint8_t, "Elise", 25);
-    delete_ae_map(map, uint8_t, "Josh");
-    set_ae_map(map, uint8_t, "Leon", 45);
+    // uint8_t buf;
+    // ae_vector vec = f_init_ae_vector();
+    // f_create_ae_vector(&vec, sizeof(uint8_t));
 
-    ae_vector *keys = get_keys_ae_map(map);
-    append_ae_vector(keys, uint8_t *, "George");
+    // buf = 1;
+    // f_append_ae_vector(&vec, &buf);
+    // buf = 2;
+    // f_append_ae_vector(&vec, &buf);
+    // buf = 3;
+    // f_append_ae_vector(&vec, &buf);
+    // buf = 4;
+    // f_append_ae_vector(&vec, &buf);
+    // buf = 5;
+    // f_append_ae_vector(&vec, &buf);
 
-    size_t i = 0;
-    for (i = 0; i < size_ae_vector(keys); i++)
-    {
-        uint8_t *key = get_ae_vector(keys, i, uint8_t *);
-        if (has_key_ae_map(map, key))
-            printf("%s is %d years old\n", key, get_ae_map(map, uint8_t, key));
-        else
-            printf("%s is not in the list\n", key);
-    }
+    // print_vec(&vec);
 
-    free_ae_map(map);
-    free_ae_vector(keys);
+    // f_invert_ae_vector(&vec);
 
-    ae_vector *test = create_ae_vector(uint8_t);
+    // print_vec(&vec);
 
-    append_ae_vector(test, uint8_t, 2);
-    append_ae_vector(test, uint8_t, 5);
-    append_ae_vector(test, uint8_t, 8);
-    append_ae_vector(test, uint8_t, 1);
+    // f_delete_ae_vector(&vec, 1, NULL);
+    
+    // print_vec(&vec);
 
-    size_t element = 0;
-    find_ae_vector(element, test, uint8_t, 5);
-    printf("%d\n", element);
+    // buf = 6;
+    // f_insert_ae_vector(&vec, 2, &buf);
+
+    // print_vec(&vec);
+
+    // ae_vector vec2 = f_init_ae_vector();
+    // f_duplicate_ae_vector(&vec2, &vec);
+
+    // print_vec(&vec2);
+    // print_vec(&vec);
+
+    // f_resize_ae_vector(&vec2, 2);
+
+    // print_vec(&vec2);
+
+    // f_resize_ae_vector(&vec, 10);
+
+    // print_vec(&vec);
+
+    // buf = 7;
+    // f_set_ae_vector(&vec, 7, &buf);
+
+    // print_vec(&vec);
+
+    // f_concat_ae_vector(&vec2, &vec);
+
+    // print_vec(&vec2);
+
+    // size_t f;
+    // buf = 2;
+    // f_find_ae_vector(&vec2, &buf, &f);
+    // buf = 10;
+    // f_find_ae_vector(&vec2, &buf, &f);
+
+    // f_free_ae_vector(&vec);
+    // f_free_ae_vector(&vec2);
+
+
+
+
+    ae_map map = f_init_ae_map();
+    f_create_ae_map(&map, sizeof(double), NULL);
+
+    double bufd = 1.0;
+    f_set_ae_map(&map, "Josh", &bufd);
+    
+    // if (f_has_key_ae_map(&map, "Josh"))
+    //     printf("Josh is in the list\n");
+    // else
+    //     printf("Josh isn't in the list\n");
+
+    bufd = 1.5;
+    f_set_ae_map(&map, "Anna", &bufd);
+    
+    bufd = 2.0;
+    f_set_ae_map(&map, "Carl", &bufd);
+    
+    bufd = 2.5;
+    f_set_ae_map(&map, "Elise", &bufd);
+
+    // print_map(&map);
+
+    f_delete_ae_map(&map, "Josh", NULL);
+
+    // print_map(&map);
+
+    // if (f_has_key_ae_map(&map, "Josh"))
+    //     printf("Josh is in the list\n");
+    // else
+    //     printf("Josh isn't in the list\n");
+
+    f_free_ae_map(&map);
 
     return;
 }

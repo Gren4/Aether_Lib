@@ -14,332 +14,359 @@ size_t f_hash_function(uint8_t *str)
     return hash;
 }
 
-ae_map *f_create_ae_map(size_t value_size, uint8_t *status)
+ae_map f_init_ae_map(void)
 {
-    if (status != NULL)
-        *status = AETHER_MAP_ERROR;
+    ae_map new_map = {
+        .data = f_init_ae_base,
+        .data_size = 0,
+        .hash_func = &f_hash_function,
+        .max_size = 0,
+        .occupancy = 0};
 
-    ae_map *new_map = malloc(sizeof(ae_map));
-    if (new_map == NULL)
-        return NULL;
-
-    new_map->io_buffer = malloc(value_size);
-    if (new_map->io_buffer == NULL)
-    {
-        free(new_map);
-        return NULL;
-    }
-
-    uint8_t temp_status;
-    new_map->vector = create_ae_vector_debug(ae_key_val, &temp_status);
-    resize_ae_vector_debug(new_map->vector, AETHER_MAP_ADD_SIZE, &temp_status);
-    if (temp_status == AETHER_MAP_ERROR)
-    {
-        free_ae_vector(new_map->vector);
-        free(new_map);
-        return NULL;
-    }
-
-    new_map->value_size = value_size;
-    new_map->occupancy = 0;
-
-    if (status != NULL)
-        *status = AETHER_MAP_SUCCESS;
     return new_map;
 }
 
-void *f_free_ae_map(ae_map *map, uint8_t *status)
+uint8_t f_create_ae_map(ae_map *map, size_t data_size, size_t (*func)(uint8_t *))
 {
-    if (status != NULL)
-        *status = AETHER_MAP_ERROR;
+    if (map == NULL)
+        return 1;
 
-    if (map != NULL)
+    if (f_create_ae_base(&map->data, sizeof(ae_base *), AETHER_MAP_ADD_SIZE) != 0)
+        return 2;
+
+    size_t i = 0;
+    for (i = 0; i < AETHER_MAP_ADD_SIZE; i++)
     {
-        if (map->vector != NULL)
+        ae_base *bucket = malloc(sizeof(ae_base));
+        #ifdef DEBUG_AE
+            printf("Allocated %x\n", bucket);
+        #endif
+        if (f_create_ae_base(bucket, sizeof(ae_key_val), AETHER_MAP_ADD_SIZE) != 0)
+            return 3;
+
+        if (f_append_ae_base(&map->data, sizeof(ae_base *), AETHER_BUCKET_ADD_SIZE, &bucket) != 0)
+            return 4;
+    }
+
+    map->data_size = data_size;
+    map->occupancy = 0;
+    map->max_size = AETHER_MAP_ADD_SIZE;
+    if (func == NULL)
+        map->hash_func = &f_hash_function;
+    else
+        map->hash_func = func;
+
+    return 0;
+}
+
+uint8_t f_free_ae_map(ae_map *map)
+{
+    if (map == NULL)
+        return 0;
+    if (map->data.memory != NULL)
+    {
+        size_t i, j;
+
+        for (i = 0; i < map->data.quant; i++)
         {
-            if (map->vector->data != NULL)
+            ae_base *bucket;
+            if (f_get_ae_base(&map->data, sizeof(ae_base *), i, &bucket) != 0)
+                return 1;
+            for (j = 0; j < bucket->quant; j++)
             {
-                size_t i = 0;
-
-                for (i = 0; i < size_ae_vector(map->vector); i++)
+                ae_key_val kv;
+                if (f_get_ae_base(bucket, sizeof(ae_key_val), j, &kv) != 0)
+                    return 2;
+                if (kv.key != NULL)
                 {
-                    ae_key_val *par = &get_ae_vector(map->vector, i, ae_key_val);
-
-                    if (par->key != NULL)
-                        free(par->key);
-
-                    if (par->value != NULL)
-                        free(par->value);
+                    #ifdef DEBUG_AE
+                        printf("Freed %x\n", kv.key);
+                    #endif
+                    free(kv.key);
+                }
+                if (kv.value != NULL)
+                {
+                    #ifdef DEBUG_AE
+                        printf("Freed %x\n", kv.value);
+                    #endif
+                    free(kv.value);
                 }
             }
-
-            free_ae_vector(map->vector);
+            f_free_ae_base(bucket);
+            #ifdef DEBUG_AE
+                printf("Freed %x\n", bucket);
+            #endif
+            free(bucket);
         }
-
-        if (map->io_buffer != NULL)
-            free(map->io_buffer);
-
-        free(map);
+        f_free_ae_base(&map->data);
     }
 
-    if (status != NULL)
-        *status = AETHER_MAP_SUCCESS;
-    return NULL;
+    return 0;
 }
 
-static void f_create_ae_key_val(ae_key_val *par, uint8_t *str, size_t *value_size, uint8_t *status)
+uint8_t f_create_ae_key_val(ae_key_val *kv, uint8_t *key, void *par, size_t data_size)
 {
-    if (status != NULL)
-        *status = AETHER_MAP_ERROR;
+    if (kv == NULL)
+        return 1;
+    size_t str_l = strlen(key) + 1;
 
-    size_t str_l = strlen(str) + 1;
-    par->key = calloc(str_l, sizeof(uint8_t));
-    par->value = malloc(*value_size);
+    kv->key = calloc(str_l, sizeof(uint8_t));
+    #ifdef DEBUG_AE
+        printf("Allocated %x\n", kv->key);
+    #endif
+    if (kv->key == NULL)
+        return 2;
 
-    if (par->key == NULL || par->value == NULL)
-        return;
+    kv->value = malloc(data_size);
+    #ifdef DEBUG_AE
+        printf("Allocated %x\n", kv->value);
+    #endif
+    if (kv->value == NULL)
+    {
+        #ifdef DEBUG_AE
+            printf("Freed %x\n", kv->key);
+        #endif
+        free(kv->key);
+        return 3;
+    }
 
-    if (status != NULL)
-        *status = AETHER_MAP_SUCCESS;
-    memmove(par->key, str, str_l * sizeof(uint8_t));
-    return;
+    memmove(kv->key, key, str_l * sizeof(uint8_t));
+    memmove(kv->value, par, data_size);
+
+    return 0;
 }
 
-static void f_resize_ae_map(ae_map *map, uint8_t *status)
+uint8_t f_resize_ae_map(ae_map *map)
 {
-    if (status != NULL)
-        *status = AETHER_MAP_ERROR;
-
-    size_t new_size = 2 * map->vector->quantity;
-    uint8_t temp_status;
-    ae_vector *resized_vector = create_ae_vector_debug(ae_key_val, &temp_status);
-    resize_ae_vector_debug(resized_vector, new_size, &temp_status);
-
-    if (temp_status == AETHER_VECTOR_ERROR)
-        return;
-
-    size_t old_occupancy = map->occupancy;
-    ae_vector *old_vector = map->vector;
-    map->occupancy = 0;
-    map->vector = resized_vector;
     size_t i = 0;
+    size_t j = 0;
 
-    for (i = 0; i < size_ae_vector(old_vector); i++)
+    size_t new_size = 2 * map->max_size;
+    size_t old_size = map->max_size;
+    for (i = map->max_size; i < new_size; i++)
     {
-        ae_key_val *par = &get_ae_vector(old_vector, i, ae_key_val);
-        if (par->key != NULL)
+        ae_base *bucket;
+        if (f_create_ae_base(bucket, sizeof(ae_key_val), AETHER_MAP_ADD_SIZE) != 0)
+            return 1;
+
+        if (f_append_ae_base(&map->data, sizeof(ae_base), AETHER_BUCKET_ADD_SIZE, &bucket) != 0)
+            return 2;
+    }
+
+    for (i = 0; i < old_size; i++)
+    {
+        ae_base *bucket;
+        if (f_get_ae_base(&map->data, sizeof(ae_base *), i, &bucket) != 0)
+            return 3;
+
+        j = 0;
+        ae_key_val kv;
+        while (j < bucket->quant)
         {
-            memmove(map->io_buffer, par->value, map->value_size);
-            f_set_ae_map(map, par->key, &temp_status);
-            if (temp_status == AETHER_MAP_ERROR)
+            if (f_get_ae_base(bucket, sizeof(ae_key_val), j, &kv) != 0)
+                return 4;
+            if (kv.key != NULL)
             {
-                free_ae_vector(resized_vector);
-                map->occupancy = old_occupancy;
-                map->vector = old_vector;
-                return;
+                size_t index = map->hash_func(kv.key) % new_size;
+                if (index == i)
+                {
+                    j++;
+                }
+                else
+                {
+                    if (f_delete_ae_base(bucket, sizeof(ae_key_val), AETHER_BUCKET_ADD_SIZE, j, &kv) != 0)
+                        return 5;
+                    ae_base *bucket_to;
+                    if (f_get_ae_base(&map->data, sizeof(ae_base *), index, &bucket_to) != 0)
+                        return 6;
+                    if (f_append_ae_base(bucket_to, sizeof(ae_key_val), AETHER_BUCKET_ADD_SIZE, &kv) != 0)
+                        return 7;
+                }
             }
         }
     }
 
-    free_ae_vector(old_vector);
+    map->max_size = new_size;
 
-    if (status != NULL)
-        *status = AETHER_MAP_SUCCESS;
-    return;
+    return 0;
 }
 
-void f_set_ae_map(ae_map *map, uint8_t *str, uint8_t *status)
+uint8_t f_set_ae_map(ae_map *map, uint8_t *key, void *par)
 {
-    if (status != NULL)
-        *status = AETHER_MAP_ERROR;
-
     if (map == NULL)
-        return;
+        return 1;
 
-    if (map->occupancy >= map->vector->quantity)
-        return;
+    if (map->occupancy >= map->max_size)
+        if (f_resize_ae_map(map) != 0)
+            return 2;
 
-    size_t index = f_hash_function(str) % size_ae_vector(map->vector);
+    ae_return_key_val res = {0, 0, false};
+    if (f_find_key_ae_map(map, key, &res) != 0)
+        return 3;
 
-    while (1)
+    ae_base *bucket;
+    if (f_get_ae_base(&map->data, sizeof(ae_base *), res.index, &bucket) != 0)
+        return 4;
+
+    ae_key_val kv;
+
+    if (res.result == true)
     {
-        uint8_t temp_status;
-        ae_key_val *par = &get_ae_vector_debug(map->vector, index, ae_key_val, &temp_status);
+        if (f_get_ae_base(bucket, sizeof(ae_key_val), res.bucket_index, &kv) != 0)
+            return 5;
 
-        if (temp_status == AETHER_VECTOR_ERROR)
-            return;
-
-        if (par->key == NULL)
-        {
-            f_create_ae_key_val(par, str, &map->value_size, status);
-
-            memmove(par->value, map->io_buffer, map->value_size);
-
-            map->occupancy++;
-
-            if (map->occupancy >= map->vector->quantity)
-            {
-                uint8_t temp_status;
-                f_resize_ae_map(map, &temp_status);
-
-                if (temp_status == AETHER_MAP_ERROR)
-                    return;
-            }
-
-            if (status != NULL)
-                *status = AETHER_MAP_SUCCESS;
-            return;
-        }
-        else
-        {
-            if ((strlen(par->key) == strlen(str)) && memcmp(str, par->key, strlen(str) * sizeof(uint8_t)) == 0)
-            {
-                memmove(par->value, map->io_buffer, map->value_size);
-
-                if (status != NULL)
-                    *status = AETHER_MAP_SUCCESS;
-                return;
-            }
-            else
-            {
-                index = (index + 1) % size_ae_vector(map->vector);
-            }
-        }
+        memmove(kv.value, par, map->data_size);
     }
-}
-
-size_t f_find_key_ae_map(ae_map *map, uint8_t *str, uint8_t *status)
-{
-    if (status != NULL)
-        *status = AETHER_MAP_ERROR;
-
-    if (map == NULL)
-        return map->vector->quantity;
-
-    size_t orig_index = f_hash_function(str) % size_ae_vector(map->vector);
-    size_t index = orig_index;
-
-    uint8_t temp_status;
-    while (1)
+    else
     {
-        ae_key_val *par = &get_ae_vector_debug(map->vector, index, ae_key_val, &temp_status);
-
-        if (temp_status == AETHER_VECTOR_ERROR)
-            return map->vector->quantity;
-
-        if (par->key == NULL)
-            return map->vector->quantity;
-
-        size_t element_index = f_hash_function(par->key) % size_ae_vector(map->vector);
-        if (element_index != orig_index)
-            return map->vector->quantity;
-
-        if ((strlen(par->key) == strlen(str)) && memcmp(str, par->key, strlen(str) * sizeof(uint8_t)) == 0)
-        {
-            if (status != NULL)
-                *status = AETHER_MAP_SUCCESS;
-            return index;
-        }
-        else
-        {
-            index = (index + 1) % size_ae_vector(map->vector);
-        }
+        if (f_create_ae_key_val(&kv, key, par, map->data_size) != 0)
+            return 6;
+        if (f_append_ae_base(bucket, sizeof(ae_key_val), AETHER_BUCKET_ADD_SIZE, &kv) != 0)
+            return 7;
+        map->occupancy++;
     }
+    return 0;
 }
 
-void *f_get_ae_map(ae_map *map, uint8_t *str, uint8_t *status)
+uint8_t f_find_key_ae_map(ae_map *map, uint8_t *key, ae_return_key_val *res)
 {
-    if (status != NULL)
-        *status = AETHER_MAP_ERROR;
+    res->result = false;
 
     if (map == NULL)
-        return NULL;
+        return 1;
+    if (map->data.memory == NULL)
+        return 2;
 
-    uint8_t temp_status;
-    size_t index = f_find_key_ae_map(map, str, &temp_status);
+    res->index = map->hash_func(key) % map->max_size;
 
-    if (temp_status == AETHER_MAP_ERROR)
-        return NULL;
+    ae_base *bucket;
+    if (f_get_ae_base(&map->data, sizeof(ae_base *), res->index, &bucket) != 0)
+        return 3;
 
-    if (index == map->vector->quantity)
-        return NULL;
+    ae_key_val kv;
 
-    ae_key_val *par = &get_ae_vector_debug(map->vector, index, ae_key_val, &temp_status);
+    res->bucket_index = 0;
 
-    if (temp_status == AETHER_VECTOR_ERROR)
-        return NULL;
-
-    return par->value;
-}
-
-void *f_delete_ae_map(ae_map *map, uint8_t *str, uint8_t *status)
-{
-    if (status != NULL)
-        *status = AETHER_MAP_ERROR;
-
-    if (map == NULL)
-        return NULL;
-
-    uint8_t temp_status;
-    size_t index = f_find_key_ae_map(map, str, &temp_status);
-
-    if (temp_status == AETHER_MAP_ERROR)
-        return NULL;
-
-    if (index == map->vector->quantity)
-        return NULL;
-
-    ae_key_val *par = &get_ae_vector_debug(map->vector, index, ae_key_val, &temp_status);
-
-    if (temp_status == AETHER_VECTOR_ERROR)
-        return NULL;
-
-    memmove(map->io_buffer, par->value, map->value_size);
-
-    free(par->key);
-    par->key = NULL;
-
-    free(par->value);
-    par->value = NULL;
-
-    map->occupancy--;
-
-    return map->io_buffer;
-}
-
-ae_vector *f_get_keys_ae_map(ae_map *map, uint8_t *status)
-{
-    if (status != NULL)
-        *status = AETHER_MAP_ERROR;
-
-    if (map == NULL)
-        return NULL;
-
-    if (map->vector == NULL)
-        return NULL;
-
-    uint8_t temp_status;
-    ae_vector *keys_vector = create_ae_vector_debug(uint8_t *, &temp_status);
-
-    if (temp_status == AETHER_VECTOR_ERROR)
-        return NULL;
-
-    size_t i = 0;
-    for (i = 0; i < size_ae_vector(map->vector); i++)
+    for (res->bucket_index = 0; res->bucket_index < bucket->quant; res->bucket_index++)
     {
-        ae_key_val *par = &get_ae_vector_debug(map->vector, i, ae_key_val, &temp_status);
+        if (f_get_ae_base(bucket, sizeof(ae_key_val), res->bucket_index, &kv) != 0)
+            return 4;
 
-        if (temp_status == AETHER_VECTOR_ERROR)
-            return NULL;
-
-        if (par->key != NULL)
+        if ((strlen(kv.key) == strlen(key)) && memcmp(key, kv.key, strlen(key) * sizeof(uint8_t)) == 0)
         {
-            append_ae_vector_debug(keys_vector, uint8_t *, par->key, &temp_status);
-
-            if (temp_status == AETHER_VECTOR_ERROR)
-                return NULL;
+            res->result = true;
+            return 0;
         }
     }
 
-    return keys_vector;
+    return 0;
+}
+
+bool f_has_key_ae_map(ae_map *map, uint8_t *key)
+{
+    ae_return_key_val ret_val = {0, 0, false};
+
+    if (f_find_key_ae_map(map, key, &ret_val) != 0)
+        return false;
+
+    return ret_val.result;
+}
+
+uint8_t f_get_ae_map(ae_map *map, uint8_t *key, void *par)
+{
+    if (map == NULL)
+        return 1;
+
+    ae_return_key_val res = {0, 0, false};
+    if (f_find_key_ae_map(map, key, &res) != 0)
+        return 2;
+
+    if (res.result == true)
+    {
+        ae_base *bucket;
+        if (f_get_ae_base(&map->data, sizeof(ae_base *), res.index, &bucket) != 0)
+            return 3;
+
+        ae_key_val kv;
+        if (f_get_ae_base(bucket, sizeof(ae_key_val), res.bucket_index, &kv) != 0)
+            return 4;
+
+        memmove(par, kv.value, map->data_size);
+
+        return 0;
+    }
+    else
+    {
+        return 5;
+    }
+}
+
+uint8_t f_delete_ae_map(ae_map *map, uint8_t *key, void *par)
+{
+    if (map == NULL)
+        return 1;
+
+    ae_return_key_val res = {0, 0, false};
+    if (f_find_key_ae_map(map, key, &res) != 0)
+        return 2;
+
+    if (res.result == true)
+    {
+        ae_base *bucket;
+        if (f_get_ae_base(&map->data, sizeof(ae_base *), res.index, &bucket) != 0)
+            return 3;
+
+        ae_key_val kv;
+        if (f_delete_ae_base(bucket, sizeof(ae_key_val), AETHER_BUCKET_ADD_SIZE, res.bucket_index, &kv) != 0)
+            return 4;
+        if (par != NULL)
+            memmove(par, kv.value, map->data_size);
+
+        #ifdef DEBUG_AE
+            printf("Freed %x\n", kv.key);
+        #endif
+        free(kv.key);
+        #ifdef DEBUG_AE
+            printf("Freed %x\n", kv.value);
+        #endif
+        free(kv.value);
+        map->occupancy--;
+    }
+
+    return 0;
+}
+
+ae_vector f_get_keys_ae_map(ae_map *map)
+{
+    ae_vector vector;
+
+    if (f_create_ae_vector(&vector, sizeof(uint8_t *)) != 0)
+        return f_init_ae_vector();
+
+    if (map == NULL)
+        return f_init_ae_vector();
+
+    if (map->data.memory == NULL)
+        return f_init_ae_vector();
+
+    size_t i, j;
+    for (i = 0; i < map->data.quant; i++)
+    {
+        ae_base *bucket;
+        if (f_get_ae_base(&map->data, sizeof(ae_base *), i, &bucket) != 0)
+            return f_init_ae_vector();
+        ae_key_val kv;
+        for (j = 0; j < bucket->quant; j++)
+        {
+            if (f_get_ae_base(bucket, sizeof(ae_key_val), j, &kv) != 0)
+                return f_init_ae_vector();
+            if (kv.key != NULL)
+            {
+                if (f_append_ae_vector(&vector, &kv.key) != 0)
+                    return f_init_ae_vector();
+            }
+        }
+    }
+
+    return vector;
 }

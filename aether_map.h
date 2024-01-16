@@ -3,63 +3,53 @@
 
 #include "aether_vector.h"
 
-#define AETHER_MAP_ADD_SIZE 10
-
-#define AETHER_MAP_SUCCESS 0
-#define AETHER_MAP_ERROR 1
+#define AETHER_MAP_ADD_SIZE 4
+#define AETHER_BUCKET_ADD_SIZE 4
 
 typedef struct
 {
-    ae_vector *vector;
-    void *io_buffer;
+    ae_base data;
     size_t occupancy;
-    size_t value_size;
+    size_t max_size;
+    size_t data_size;
+    size_t (*hash_func)(uint8_t *);
 } ae_map;
+
 typedef struct
 {
     uint8_t *key;
     void *value;
 } ae_key_val;
 
-size_t f_hash_function(uint8_t *str);
+typedef struct
+{
+    size_t index;
+    size_t bucket_index;
+    bool result;
+} ae_return_key_val;
 
-ae_map *f_create_ae_map(size_t value_size, uint8_t *status);
-#define create_ae_map(type) f_create_ae_map(sizeof(type), NULL)
-#define create_ae_map_debug(type, status) f_create_ae_map(sizeof(type), status)
+size_t f_hash_function(uint8_t *key);
 
-void *f_free_ae_map(ae_map *map, uint8_t *status);
-#define free_ae_map(map) map = f_free_ae_map(map, NULL)
-#define free_ae_map_debug(map, status) map = f_free_ae_map(map, status)
+ae_map f_init_ae_map(void);
 
-void f_set_ae_map(ae_map *map, uint8_t *str, uint8_t *status);
-#define set_ae_map(map, type, key, par) \
-    {                                   \
-        *(type *)map->io_buffer = par;  \
-        f_set_ae_map(map, key, NULL);   \
-    }
-#define set_ae_map_debug(map, type, key, par, status) \
-    {                                                 \
-        *(type *)map->io_buffer = par;                \
-        f_set_ae_map(map, key, status);               \
-    }
+uint8_t f_create_ae_map(ae_map *map, size_t data_size, size_t (*func)(uint8_t *));
 
-size_t f_find_key_ae_map(ae_map *map, uint8_t *str, uint8_t *status);
-#define find_key_ae_map(map, key) f_find_key_ae_map(map, key, NULL)
-#define find_key_ae_map_debug(map, key, status) f_find_key_ae_map(map, key, status)
+uint8_t f_free_ae_map(ae_map *map);
 
-#define has_key_ae_map(map, key) (f_find_key_ae_map(map, key, NULL) != map->vector->quantity)
-#define has_key_ae_map_debug(map, key, status) (f_find_key_ae_map(map, key, status) != map->vector->quantity)
+uint8_t f_create_ae_key_val(ae_key_val *kv, uint8_t *key, void *par, size_t data_size);
 
-void *f_get_ae_map(ae_map *map, uint8_t *str, uint8_t *status);
-#define get_ae_map(map, type, key) *(type *)f_get_ae_map(map, key, NULL)
-#define get_ae_map_debug(map, type, key, status) *(type *)f_get_ae_map(map, key, status)
+uint8_t f_resize_ae_map(ae_map *map);
 
-void *f_delete_ae_map(ae_map *map, uint8_t *str, uint8_t *status);
-#define delete_ae_map(map, type, key) *(type *)f_delete_ae_map(map, key, NULL)
-#define delete_ae_map_debug(map, type, key, status) *(type *)f_delete_ae_map(map, key, status)
+uint8_t f_set_ae_map(ae_map *map, uint8_t *key, void *par);
 
-ae_vector *f_get_keys_ae_map(ae_map *map, uint8_t *status);
-#define get_keys_ae_map(map) f_get_keys_ae_map(map, NULL)
-#define get_keys_ae_map_debug(map, status) f_get_keys_ae_map(map, status)
+uint8_t f_find_key_ae_map(ae_map *map, uint8_t *key, ae_return_key_val *res);
+
+bool f_has_key_ae_map(ae_map *map, uint8_t *key);
+
+uint8_t f_get_ae_map(ae_map *map, uint8_t *key, void *par);
+
+uint8_t f_delete_ae_map(ae_map *map, uint8_t *key, void *par);
+
+ae_vector f_get_keys_ae_map(ae_map *map);
 
 #endif /* __AETHER_MAP__ */
