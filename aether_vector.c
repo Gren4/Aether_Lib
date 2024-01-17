@@ -4,8 +4,7 @@ ae_vector f_init_ae_vector(void)
 {
     ae_vector new_vector = {
         .data = f_init_ae_base(),
-        .data_size = 0 
-    };
+        .data_size = 0};
 
     return new_vector;
 }
@@ -72,6 +71,16 @@ uint8_t f_get_ae_vector(ae_vector *vector, size_t i, void *par)
     return 0;
 }
 
+uint8_t f_get_pointer_ae_vector(ae_vector *vector, size_t i, void **par)
+{
+    if (vector == NULL)
+        return 1;
+    if (f_get_pointer_ae_base(&vector->data, vector->data_size, i, par) != 0)
+        return 2;
+
+    return 0;
+}
+
 uint8_t f_concat_ae_vector(ae_vector *vector_to, ae_vector *vector_from)
 {
     if (vector_to == NULL)
@@ -115,7 +124,7 @@ uint8_t f_duplicate_ae_vector(ae_vector *vector_out, ae_vector *vector_in)
 
     if (f_duplicate_ae_base(&vector_out->data, &vector_in->data, vector_in->data_size, AETHER_VECTOR_ADD_SIZE) != 0)
         return 3;
-    
+
     vector_out->data_size = vector_in->data_size;
 
     return 0;

@@ -7,7 +7,7 @@
 #include <string.h>
 #include <stdbool.h>
 
-//#define DEBUG_AE
+// #define DEBUG_AE
 
 typedef struct ae_base
 {
@@ -28,6 +28,8 @@ uint8_t f_append_ae_base(ae_base *base, size_t data_size, size_t storage_size, v
 uint8_t f_set_ae_base(ae_base *base, size_t data_size, size_t i, void *par);
 
 uint8_t f_get_ae_base(ae_base *base, size_t data_size, size_t i, void *par);
+
+uint8_t f_get_pointer_ae_base(ae_base *base, size_t data_size, size_t i, void **par);
 
 uint8_t f_concat_ae_base(ae_base *base_to, ae_base *base_from, size_t data_size, size_t storage_size);
 

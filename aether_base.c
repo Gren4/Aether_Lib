@@ -4,8 +4,7 @@ ae_base f_init_ae_base(void)
 {
     ae_base new_base = {
         .memory = NULL,
-        .quant = 0
-    };
+        .quant = 0};
 
     return new_base;
 }
@@ -29,9 +28,9 @@ uint8_t f_create_ae_base(ae_base *base, size_t data_size, size_t storage_size)
 
 uint8_t f_free_ae_base(ae_base *base)
 {
-    #ifdef DEBUG_AE
-        printf("Freed %x\n", base->memory);
-    #endif
+#ifdef DEBUG_AE
+    printf("Freed %x\n", base->memory);
+#endif
     free(base->memory);
     base->quant = 0;
 
@@ -46,9 +45,9 @@ uint8_t f_resize_ae_base(ae_base *base, size_t data_size, size_t storage_size, s
         return 0;
 
     void *p = realloc(base->memory, (((new_size / storage_size) + 1) * storage_size) * data_size);
-    #ifdef DEBUG_AE
-        printf("Allocated %x\n", p);
-    #endif
+#ifdef DEBUG_AE
+    printf("Allocated %x\n", p);
+#endif
     if (p == NULL)
         return 2;
 
@@ -72,9 +71,9 @@ uint8_t f_append_ae_base(ae_base *base, size_t data_size, size_t storage_size, v
     if ((base->quant + 1) % storage_size == 0)
     {
         void *p = realloc(base->memory, ((base->quant + 1) + storage_size) * data_size);
-        #ifdef DEBUG_AE
-            printf("Allocated %x\n", p);
-        #endif
+#ifdef DEBUG_AE
+        printf("Allocated %x\n", p);
+#endif
         if (p == NULL)
             return 3;
 
@@ -116,6 +115,20 @@ uint8_t f_get_ae_base(ae_base *base, size_t data_size, size_t i, void *par)
     return 0;
 }
 
+uint8_t f_get_pointer_ae_base(ae_base *base, size_t data_size, size_t i, void **par)
+{
+    if (base->memory == NULL)
+        return 1;
+    if (i < 0 || i >= base->quant)
+        return 2;
+    if (par == NULL)
+        return 3;
+
+    *par = base->memory + i * data_size;
+
+    return 0;
+}
+
 uint8_t f_concat_ae_base(ae_base *base_to, ae_base *base_from, size_t data_size, size_t storage_size)
 {
     if (base_to->memory == NULL)
@@ -125,9 +138,9 @@ uint8_t f_concat_ae_base(ae_base *base_to, ae_base *base_from, size_t data_size,
 
     size_t new_size = base_to->quant + base_from->quant;
     void *p = realloc(base_to->memory, (((new_size / storage_size) + 1) * storage_size) * data_size);
-    #ifdef DEBUG_AE
-        printf("Allocated %x\n", p);
-    #endif
+#ifdef DEBUG_AE
+    printf("Allocated %x\n", p);
+#endif
     if (p == NULL)
         return 3;
 
@@ -150,9 +163,9 @@ uint8_t f_insert_ae_base(ae_base *base, size_t data_size, size_t storage_size, s
     if ((base->quant + 1) % storage_size == 0)
     {
         void *p = realloc(base->memory, ((base->quant + 1) + storage_size) * data_size);
-        #ifdef DEBUG_AE
-            printf("Allocated %x\n", p);
-        #endif
+#ifdef DEBUG_AE
+        printf("Allocated %x\n", p);
+#endif
         if (p == NULL)
             return 3;
 
@@ -175,9 +188,9 @@ uint8_t f_delete_ae_base(ae_base *base, size_t data_size, size_t storage_size, s
     if ((base->quant + 1) % storage_size == 0)
     {
         void *p = realloc(base->memory, ((base->quant + 1) + storage_size) * data_size);
-        #ifdef DEBUG_AE
-            printf("Allocated %x\n", p);
-        #endif
+#ifdef DEBUG_AE
+        printf("Allocated %x\n", p);
+#endif
         if (p == NULL)
             return 2;
 
