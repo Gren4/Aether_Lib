@@ -7,8 +7,6 @@
 #include <string.h>
 #include <stdbool.h>
 
-//#define DEBUG_AE
-
 typedef struct ae_base
 {
     void *memory;
@@ -25,6 +23,8 @@ uint8_t resize_ae_base(ae_base *base, size_t data_size, size_t storage_size, siz
 
 uint8_t append_ae_base(ae_base *base, size_t data_size, size_t storage_size, void *par);
 
+uint8_t append_base_ae_base(ae_base *base_to, ae_base *base_from, size_t data_size, size_t storage_size, size_t i, size_t n);
+
 uint8_t set_ae_base(ae_base *base, size_t data_size, size_t i, void *par);
 
 uint8_t get_ae_base(ae_base *base, size_t data_size, size_t i, void *par);
@@ -34,6 +34,8 @@ uint8_t get_pointer_ae_base(ae_base *base, size_t data_size, size_t i, void **pa
 uint8_t concat_ae_base(ae_base *base_to, ae_base *base_from, size_t data_size, size_t storage_size);
 
 uint8_t insert_ae_base(ae_base *base, size_t data_size, size_t storage_size, size_t i, void *par);
+
+uint8_t insert_base_ae_base(ae_base *base_to, ae_base *base_from, size_t data_size, size_t storage_size, size_t i_to, size_t i_from, size_t n);
 
 uint8_t delete_ae_base(ae_base *base, size_t data_size, size_t storage_size, size_t i, void *par);
 

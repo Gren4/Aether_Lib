@@ -1,4 +1,5 @@
 #include "aether_lib.h"
+#include <time.h>
 
 void print_vec(ae_vector *vec)
 {
@@ -36,9 +37,9 @@ void print_map(ae_map *map)
 
 int comp(const void *a, const void *b)
 {
-    if (*(uint8_t*)a < *(uint8_t*)b)
+    if (*(uint8_t *)a < *(uint8_t *)b)
         return -1;
-    else if (*(uint8_t*)a > *(uint8_t*)b)
+    else if (*(uint8_t *)a > *(uint8_t *)b)
         return 1;
     else
         return 0;
@@ -46,101 +47,74 @@ int comp(const void *a, const void *b)
 
 int main(void)
 {
+    clock_t tic = clock();
+
     uint8_t buf;
-    ae_vector vec = init_ae_vector();
-    create_ae_vector(&vec, sizeof(uint8_t));
+    ae_vector vec = create_ae_vector(sizeof(uint8_t));
 
-    buf = 1;
-    append_ae_vector(&vec, &buf);
-    buf = 2;
-    append_ae_vector(&vec, &buf);
-    buf = 3;
-    append_ae_vector(&vec, &buf);
-    buf = 4;
-    append_ae_vector(&vec, &buf);
-    buf = 5;
-    append_ae_vector(&vec, &buf);
+    ae_vector bec = create_ae_vector(sizeof(uint8_t));
+
+    for (buf = 1; buf < 6; buf++)
+        append_ae_vector(&vec, &buf);
+
+    for (buf = 20; buf > 5; buf--)
+        append_ae_vector(&bec, &buf);
+
+    insert_vector_ae_vector(&vec, &bec, 2, 2, 10);
 
     print_vec(&vec);
-
-    invert_ae_vector(&vec);
-
-    print_vec(&vec);
-
-    delete_ae_vector(&vec, 1, NULL);
-
-    print_vec(&vec);
-
-    buf = 6;
-    insert_ae_vector(&vec, 2, &buf);
-
-    print_vec(&vec);
-
-    ae_vector vec2 = init_ae_vector();
-    duplicate_ae_vector(&vec2, &vec);
-
-    print_vec(&vec2);
-
-    resize_ae_vector(&vec2, 2);
-
-    print_vec(&vec2);
-
-    resize_ae_vector(&vec, 10);
-
-    print_vec(&vec);
-
-    buf = 7;
-    set_ae_vector(&vec, 7, &buf);
-
-    print_vec(&vec);
-
-    concat_ae_vector(&vec2, &vec);
-
-    sort_ae_vector(&vec2, &comp);
-
-    print_vec(&vec2);
-
-    size_t f;
-    buf = 2;
-    find_ae_vector(&vec2, &buf, &f);
-    buf = 10;
-    find_ae_vector(&vec2, &buf, &f);
-
+    print_vec(&bec);
     free_ae_vector(&vec);
-    free_ae_vector(&vec2);
+    free_ae_vector(&bec);
+    printf("\n");
 
-    ae_map map = init_ae_map();
-    create_ae_map(&map, sizeof(double), NULL);
+    ae_stack stack = create_ae_stack(sizeof(uint8_t));
 
-    double bufd = 1.0;
-    set_ae_map(&map, "Josh", &bufd);
+    for (buf = 1; buf <= 4; buf++)
+        push_ae_stack(&stack, &buf);
+    top_ae_stack(&stack, &buf);
+    printf("Element %d at top\n", buf);
 
-    if (has_key_ae_map(&map, "Josh"))
-        printf("Josh is in the list\n");
-    else
-        printf("Josh isn't in the list\n");
+    while (stack.quant != 0)
+    {
+        pop_ae_stack(&stack, &buf);
+        printf("Popped element %d\n", buf);
+    }
+    free_ae_stack(&stack);
+    printf("\n");
 
-    bufd = 1.5;
-    set_ae_map(&map, "Anna", &bufd);
+    ae_queue queue = create_ae_queue(sizeof(uint8_t));
+    for (buf = 1; buf <= 4; buf++)
+        push_ae_queue(&queue, &buf);
 
-    bufd = 2.0;
-    set_ae_map(&map, "Carl", &bufd);
+    front_ae_queue(&queue, &buf);
+    printf("Element %d at front\n", buf);
 
-    bufd = 2.5;
-    set_ae_map(&map, "Elise", &bufd);
+    while (queue.quant != 0)
+    {
+        pop_ae_queue(&queue, &buf);
+        printf("Popped element %d\n", buf);
+    }
+    free_ae_queue(&queue);
+    printf("\n");
 
-    print_map(&map);
+    ae_deque deque = create_ae_deque(sizeof(uint8_t));
+    for (buf = 1; buf <= 5; buf++)
+        push_back_ae_deque(&deque, &buf);
+    for (buf = 5; buf <= 10; buf++)
+        push_front_ae_deque(&deque, &buf);
 
-    delete_ae_map(&map, "Josh", NULL);
+    while(deque.quant != 0)
+    {
+        pop_front_ae_deque(&deque, &buf);
+        printf("Popped element %d\n", buf);
+    }
+    free_ae_deque(&deque);
+    printf("\n");
 
-    print_map(&map);
+    clock_t toc = clock();
 
-    if (has_key_ae_map(&map, "Josh"))
-        printf("Josh is in the list\n");
-    else
-        printf("Josh isn't in the list\n");
-
-    free_ae_map(&map);
+    printf("Execution time: %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);
 
     return 0;
 }

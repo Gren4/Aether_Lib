@@ -12,46 +12,45 @@ size_t hash_function(const char *key)
     return hash;
 }
 
-ae_map init_ae_map(void)
+ae_map create_ae_map(size_t data_size, size_t (*func)(const char *))
 {
     ae_map new_map = {
         .data = init_ae_base(),
-        .data_size = 0,
-        .hash_func = &hash_function,
-        .max_size = 0,
+        .data_size = data_size,
+        .max_size = AETHER_MAP_ADD_SIZE,
         .occupancy = 0};
+
+    if (func == NULL)
+        new_map.hash_func = &hash_function;
+    else
+        new_map.hash_func = func;
+
+    prepare_ae_map(&new_map, func);
 
     return new_map;
 }
 
-uint8_t create_ae_map(ae_map *map, size_t data_size, size_t (*func)(const char *))
+void prepare_ae_map(ae_map *map, size_t (*func)(const char *))
 {
+
     if (map == NULL)
-        return 1;
+        return;
 
     if (create_ae_base(&map->data, sizeof(ae_base), AETHER_MAP_ADD_SIZE) != 0)
-        return 2;
+        return;
 
     size_t i = 0;
     for (i = 0; i < AETHER_MAP_ADD_SIZE; i++)
     {
         ae_base bucket;
         if (create_ae_base(&bucket, sizeof(ae_key_val), AETHER_MAP_ADD_SIZE) != 0)
-            return 3;
+            return;
 
         if (append_ae_base(&map->data, sizeof(ae_base), AETHER_BUCKET_ADD_SIZE, &bucket) != 0)
-            return 4;
+            return;
     }
 
-    map->data_size = data_size;
-    map->occupancy = 0;
-    map->max_size = AETHER_MAP_ADD_SIZE;
-    if (func == NULL)
-        map->hash_func = &hash_function;
-    else
-        map->hash_func = func;
-
-    return 0;
+    return;
 }
 
 uint8_t free_ae_map(ae_map *map)
@@ -97,18 +96,23 @@ uint8_t free_ae_map(ae_map *map)
 
 uint8_t create_ae_key_val(ae_key_val *kv, const char *key, void *par, size_t data_size)
 {
+
     if (kv == NULL)
         return 1;
+
     size_t str_l = strlen(key) + 1;
 
     kv->key = calloc(str_l, sizeof(uint8_t));
+
     if (kv->key == NULL)
         return 2;
+
 #ifdef DEBUG_AE
     printf("Allocated %p\n", (void *)kv->key);
 #endif
 
     kv->value = malloc(data_size);
+
     if (kv->value == NULL)
     {
 #ifdef DEBUG_AE
@@ -117,6 +121,7 @@ uint8_t create_ae_key_val(ae_key_val *kv, const char *key, void *par, size_t dat
         free(kv->key);
         return 3;
     }
+
 #ifdef DEBUG_AE
     printf("Allocated %p\n", kv->value);
 #endif
@@ -184,6 +189,7 @@ uint8_t resize_ae_map(ae_map *map)
 
 uint8_t set_ae_map(ae_map *map, const char *key, void *par)
 {
+
     if (map == NULL)
         return 1;
 
@@ -265,6 +271,7 @@ bool has_key_ae_map(ae_map *map, const char *key)
 
 uint8_t get_ae_map(ae_map *map, const char *key, void *par)
 {
+
     if (map == NULL)
         return 1;
 
@@ -294,6 +301,7 @@ uint8_t get_ae_map(ae_map *map, const char *key, void *par)
 
 uint8_t delete_ae_map(ae_map *map, const char *key, void *par)
 {
+
     if (map == NULL)
         return 1;
 
@@ -329,32 +337,29 @@ uint8_t delete_ae_map(ae_map *map, const char *key, void *par)
 
 ae_vector get_keys_ae_map(ae_map *map)
 {
-    ae_vector vector;
-
-    if (create_ae_vector(&vector, sizeof(uint8_t *)) != 0)
-        return init_ae_vector();
+    ae_vector vector = create_ae_vector(sizeof(uint8_t *));
 
     if (map == NULL)
-        return init_ae_vector();
+        return vector;
 
     if (map->data.memory == NULL)
-        return init_ae_vector();
+        return vector;
 
     size_t i, j;
     for (i = 0; i < map->data.quant; i++)
     {
         ae_base *bucket;
         if (get_pointer_ae_base(&map->data, sizeof(ae_base), i, (void **)(&bucket)) != 0)
-            return init_ae_vector();
+            return vector;
         ae_key_val kv;
         for (j = 0; j < bucket->quant; j++)
         {
             if (get_ae_base(bucket, sizeof(ae_key_val), j, &kv) != 0)
-                return init_ae_vector();
+                return vector;
             if (kv.key != NULL)
             {
                 if (append_ae_vector(&vector, &kv.key) != 0)
-                    return init_ae_vector();
+                    return vector;
             }
         }
     }

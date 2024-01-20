@@ -30,9 +30,9 @@ typedef struct
 
 size_t hash_function(const char *key);
 
-ae_map init_ae_map(void);
+ae_map create_ae_map(size_t data_size, size_t (*func)(const char *));
 
-uint8_t create_ae_map(ae_map *map, size_t data_size, size_t (*func)(const char *));
+void prepare_ae_map(ae_map *map, size_t (*func)(const char *));
 
 uint8_t free_ae_map(ae_map *map);
 
