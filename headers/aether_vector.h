@@ -11,9 +11,9 @@ typedef struct ae_vector
     size_t data_size;
 } ae_vector;
 
-ae_vector create_ae_vector(size_t data_size);
+ae_vector create_ae_vector(size_t data_size, size_t quant);
 
-void prepare_ae_vector(ae_vector *vector);
+void prepare_ae_vector(ae_vector *vector, size_t quant);
 
 uint8_t free_ae_vector(ae_vector *vector);
 
@@ -35,6 +35,8 @@ uint8_t insert_ae_vector(ae_vector *vector, size_t i, void *par);
 
 uint8_t insert_vector_ae_vector(ae_vector *vector_to, ae_vector *vector_from, size_t i_to, size_t i_from, size_t n);
 
+uint8_t pop_ae_vector(ae_vector *vector, void *par);
+
 uint8_t delete_ae_vector(ae_vector *vector, size_t i, void *par);
 
 uint8_t duplicate_ae_vector(ae_vector *vector_out, ae_vector *vector_in);
@@ -45,4 +47,6 @@ uint8_t find_ae_vector(ae_vector *vector, void *par, size_t *ret);
 
 uint8_t sort_ae_vector(ae_vector *vector, int (*comparator)(const void *, const void *));
 
-#endif /* __AETHER_VECTOR__ */
+uint8_t swap_ae_vector(ae_vector *vector, size_t i, size_t j);
+
+#endif // __AETHER_VECTOR__

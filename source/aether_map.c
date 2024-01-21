@@ -337,7 +337,7 @@ uint8_t delete_ae_map(ae_map *map, const char *key, void *par)
 
 ae_vector get_keys_ae_map(ae_map *map)
 {
-    ae_vector vector = create_ae_vector(sizeof(uint8_t *));
+    ae_vector vector = create_ae_vector(sizeof(uint8_t *), 0);
 
     if (map == NULL)
         return vector;

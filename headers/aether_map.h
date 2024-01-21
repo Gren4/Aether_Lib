@@ -52,4 +52,4 @@ uint8_t delete_ae_map(ae_map *map, const char *key, void *par);
 
 ae_vector get_keys_ae_map(ae_map *map);
 
-#endif /* __AETHER_MAP__ */
+#endif // __AETHER_MAP__

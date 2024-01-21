@@ -7,4 +7,4 @@
 #include "aether_queue.h"
 #include "aether_deque.h"
 
-#endif /* __AETHER_LIB__ */
+#endif // __AETHER_LIB__

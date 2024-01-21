@@ -47,4 +47,6 @@ uint8_t find_ae_base(ae_base *base, size_t data_size, void *par, size_t *ret);
 
 uint8_t sort_ae_base(ae_base *base, size_t data_size, int (*comparator)(const void *, const void *));
 
-#endif /* __AETHER_BASE__ */
+uint8_t swap_ae_base(ae_base *base, size_t data_size, size_t i, size_t j);
+
+#endif // __AETHER_BASE__

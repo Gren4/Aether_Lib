@@ -48,69 +48,27 @@ int comp(const void *a, const void *b)
 int main(void)
 {
     clock_t tic = clock();
+    uint8_t buf = 1;
 
-    uint8_t buf;
-    ae_vector vec = create_ae_vector(sizeof(uint8_t));
+    ae_deque deq = create_ae_deque(sizeof(uint8_t));
 
-    ae_vector bec = create_ae_vector(sizeof(uint8_t));
-
-    for (buf = 1; buf < 6; buf++)
-        append_ae_vector(&vec, &buf);
-
-    for (buf = 20; buf > 5; buf--)
-        append_ae_vector(&bec, &buf);
-
-    insert_vector_ae_vector(&vec, &bec, 2, 2, 10);
-
-    print_vec(&vec);
-    print_vec(&bec);
-    free_ae_vector(&vec);
-    free_ae_vector(&bec);
-    printf("\n");
-
-    ae_stack stack = create_ae_stack(sizeof(uint8_t));
-
-    for (buf = 1; buf <= 4; buf++)
-        push_ae_stack(&stack, &buf);
-    top_ae_stack(&stack, &buf);
-    printf("Element %d at top\n", buf);
-
-    while (stack.quant != 0)
+    for (buf = 1; buf <= 30; buf++)
     {
-        pop_ae_stack(&stack, &buf);
-        printf("Popped element %d\n", buf);
+        push_front_ae_deque(&deq, &buf);
     }
-    free_ae_stack(&stack);
-    printf("\n");
 
-    ae_queue queue = create_ae_queue(sizeof(uint8_t));
-    for (buf = 1; buf <= 4; buf++)
-        push_ae_queue(&queue, &buf);
-
-    front_ae_queue(&queue, &buf);
-    printf("Element %d at front\n", buf);
-
-    while (queue.quant != 0)
+    buf = 13;
+    insert_ae_deque(&deq, 25, &buf);
+    size_t i = 0;
+    // pop_front_ae_deque(&deq, NULL);
+    // pop_back_ae_deque(&deq, NULL);
+    while (get_ae_deque(&deq, i, &buf) == 0)
     {
-        pop_ae_queue(&queue, &buf);
-        printf("Popped element %d\n", buf);
+        printf("%lld %d\n", i, buf);
+        i++;
     }
-    free_ae_queue(&queue);
-    printf("\n");
 
-    ae_deque deque = create_ae_deque(sizeof(uint8_t));
-    for (buf = 1; buf <= 5; buf++)
-        push_back_ae_deque(&deque, &buf);
-    for (buf = 5; buf <= 10; buf++)
-        push_front_ae_deque(&deque, &buf);
-
-    while(deque.quant != 0)
-    {
-        pop_front_ae_deque(&deque, &buf);
-        printf("Popped element %d\n", buf);
-    }
-    free_ae_deque(&deque);
-    printf("\n");
+    free_ae_deque(&deq);
 
     clock_t toc = clock();
 

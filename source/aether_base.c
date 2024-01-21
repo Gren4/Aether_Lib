@@ -296,13 +296,15 @@ uint8_t delete_ae_base(ae_base *base, size_t data_size, size_t storage_size, siz
         return 1;
     if (base->memory == NULL)
         return 2;
+    if (i < 0 || i >= base->quant)
+        return 3;
 
-    if ((base->quant + 1) % storage_size == 0)
+    if ((base->quant - 1) % (2 * storage_size) == 0)
     {
-        void *p = realloc(base->memory, ((base->quant + 1) + storage_size) * data_size);
+        void *p = realloc(base->memory, (((base->quant - 1) / storage_size) + 1) * storage_size * data_size);
 
         if (p == NULL)
-            return 3;
+            return 4;
 
 #ifdef DEBUG_AE
         printf("Reallocated memory from address %p to %p\n", base->memory, p);
@@ -313,8 +315,8 @@ uint8_t delete_ae_base(ae_base *base, size_t data_size, size_t storage_size, siz
 
     if (par != NULL)
         memmove(par, base->memory + i * data_size, data_size);
-
-    memmove(base->memory + i * data_size, base->memory + (i + 1) * data_size, (base->quant - i) * data_size);
+    if (i != base->quant - 1)
+        memmove(base->memory + i * data_size, base->memory + (i + 1) * data_size, (base->quant - i) * data_size);
 
     base->quant--;
 
@@ -405,6 +407,26 @@ uint8_t sort_ae_base(ae_base *base, size_t data_size, int (*comparator)(const vo
         return 2;
 
     qsort(base->memory, base->quant, data_size, comparator);
+
+    return 0;
+}
+
+uint8_t swap_ae_base(ae_base *base, size_t data_size, size_t i, size_t j)
+{
+    if (base == NULL)
+        return 1;
+    if (base->memory == NULL)
+        return 2;
+
+    void *p = malloc(data_size);
+    if (p == NULL)
+        return 3;
+
+    memmove(p, base->memory + j * data_size, data_size);
+    memmove(base->memory + j * data_size, base->memory + i * data_size, data_size);
+    memmove(base->memory + i * data_size, p, data_size);
+
+    free(p);
 
     return 0;
 }

@@ -1,17 +1,18 @@
 #include "aether_vector.h"
 
-ae_vector create_ae_vector(size_t data_size)
+ae_vector create_ae_vector(size_t data_size, size_t quant)
 {
+    if (quant == 0)
+        quant = AETHER_VECTOR_ADD_SIZE;
     ae_vector new_vector = {
         .data = init_ae_base(),
         .data_size = data_size};
-
-    prepare_ae_vector(&new_vector);
+    prepare_ae_vector(&new_vector, quant);
 
     return new_vector;
 }
 
-void prepare_ae_vector(ae_vector *vector)
+void prepare_ae_vector(ae_vector *vector, size_t quant)
 {
     if (vector == NULL)
         return;
@@ -149,6 +150,18 @@ uint8_t insert_vector_ae_vector(ae_vector *vector_to, ae_vector *vector_from, si
     return 0;
 }
 
+uint8_t pop_ae_vector(ae_vector *vector, void *par)
+{
+
+    if (vector == NULL)
+        return 1;
+
+    if (delete_ae_base(&vector->data, vector->data_size, AETHER_VECTOR_ADD_SIZE, vector->data.quant - 1, par) != 0)
+        return 2;
+
+    return 0;
+}
+
 uint8_t delete_ae_vector(ae_vector *vector, size_t i, void *par)
 {
 
@@ -208,6 +221,17 @@ uint8_t sort_ae_vector(ae_vector *vector, int (*comparator)(const void *, const 
         return 1;
 
     if (sort_ae_base(&vector->data, vector->data_size, comparator) != 0)
+        return 2;
+
+    return 0;
+}
+
+uint8_t swap_ae_vector(ae_vector *vector, size_t i, size_t j)
+{
+    if (vector == NULL)
+        return 1;
+
+    if (swap_ae_base(&vector->data, vector->data_size, i, j) != 0)
         return 2;
 
     return 0;
