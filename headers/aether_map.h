@@ -3,9 +3,6 @@
 
 #include "aether_vector.h"
 
-#define AETHER_MAP_ADD_SIZE 10
-#define AETHER_BUCKET_ADD_SIZE 4
-
 typedef struct
 {
     ae_base data;

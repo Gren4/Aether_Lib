@@ -3,9 +3,6 @@
 
 #include "aether_base.h"
 
-#define AETHER_LINK_ARRAY_ADD_SIZE 10
-#define AETHER_DEQUE_ADD_SIZE 5
-
 typedef struct
 {
     ae_base pointers;

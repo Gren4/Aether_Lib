@@ -17,7 +17,7 @@ void print_vec(ae_vector *vec)
 
 void print_map(ae_map *map)
 {
-    double buf;
+    uint8_t buf;
     const char *key;
     size_t i = 0;
 
@@ -27,7 +27,7 @@ void print_map(ae_map *map)
     {
         get_ae_vector(&keys, i, &key);
         get_ae_map(map, key, &buf);
-        printf("%s is %f\n", key, buf);
+        printf("%s is %d\n", key, buf);
     }
     free_ae_vector(&keys);
     printf("\n");
@@ -47,32 +47,28 @@ int comp(const void *a, const void *b)
 
 int main(void)
 {
-    clock_t tic = clock();
-    uint8_t buf = 1;
+    clock_t tic, toc;
 
-    ae_deque deq = create_ae_deque(sizeof(uint8_t));
+    uint8_t buf = 0;
 
-    for (buf = 1; buf <= 30; buf++)
+    ae_map map = create_ae_map(sizeof(uint8_t), NULL);
+    printf("Append\n");
+    char str[400] = {0};
+    tic = clock();
+
+    for (int i = 0; i < 255; i++)
     {
-        push_front_ae_deque(&deq, &buf);
+        sprintf(&str[0],"%d", i);
+        set_ae_map(&map, &str[0], &buf);
+        buf += 1;
     }
 
-    buf = 13;
-    insert_ae_deque(&deq, 25, &buf);
-    size_t i = 0;
-    // pop_front_ae_deque(&deq, NULL);
-    // pop_back_ae_deque(&deq, NULL);
-    while (get_ae_deque(&deq, i, &buf) == 0)
-    {
-        printf("%lld %d\n", i, buf);
-        i++;
-    }
-
-    free_ae_deque(&deq);
-
-    clock_t toc = clock();
-
+    toc = clock();
     printf("Execution time: %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);
+    printf("\n");
+    print_map(&map);
+
+    free_ae_map(&map);
 
     return 0;
 }

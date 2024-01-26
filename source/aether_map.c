@@ -1,5 +1,8 @@
 #include "aether_map.h"
 
+const size_t ae_base_size = sizeof(ae_base);
+const size_t ae_key_val_size = sizeof(ae_key_val);
+
 size_t hash_function(const char *key)
 {
     /* djb2 */
@@ -32,21 +35,17 @@ ae_map create_ae_map(size_t data_size, size_t (*func)(const char *))
 
 void prepare_ae_map(ae_map *map, size_t (*func)(const char *))
 {
-
-    if (map == NULL)
-        return;
-
-    if (create_ae_base(&map->data, sizeof(ae_base), AETHER_MAP_ADD_SIZE) != 0)
+    if (create_ae_base(&map->data, &ae_base_size, AETHER_MAP_ADD_SIZE) != 0)
         return;
 
     size_t i = 0;
     for (i = 0; i < AETHER_MAP_ADD_SIZE; i++)
     {
-        ae_base bucket;
-        if (create_ae_base(&bucket, sizeof(ae_key_val), AETHER_MAP_ADD_SIZE) != 0)
+        ae_base bucket = init_ae_base();
+        if (create_ae_base(&bucket, &ae_key_val_size, AETHER_MAP_ADD_SIZE) != 0)
             return;
 
-        if (append_ae_base(&map->data, sizeof(ae_base), AETHER_BUCKET_ADD_SIZE, &bucket) != 0)
+        if (append_ae_base(&map->data, &ae_base_size, &bucket) != 0)
             return;
     }
 
@@ -64,12 +63,12 @@ uint8_t free_ae_map(ae_map *map)
         for (i = 0; i < map->data.quant; i++)
         {
             ae_base *bucket;
-            if (get_pointer_ae_base(&map->data, sizeof(ae_base), i, (void **)(&bucket)) != 0)
+            if (get_pointer_ae_base(&map->data, &ae_base_size, i, (void **)(&bucket)) != 0)
                 return 1;
             for (j = 0; j < bucket->quant; j++)
             {
                 ae_key_val kv;
-                if (get_ae_base(bucket, sizeof(ae_key_val), j, &kv) != 0)
+                if (get_ae_base(bucket, &ae_key_val_size, j, &kv) != 0)
                     return 2;
                 if (kv.key != NULL)
                 {
@@ -141,25 +140,25 @@ uint8_t resize_ae_map(ae_map *map)
     size_t old_size = map->max_size;
     for (i = map->max_size; i < new_size; i++)
     {
-        ae_base bucket;
-        if (create_ae_base(&bucket, sizeof(ae_key_val), AETHER_MAP_ADD_SIZE) != 0)
+        ae_base bucket = init_ae_base();
+        if (create_ae_base(&bucket, &ae_key_val_size, AETHER_MAP_ADD_SIZE) != 0)
             return 1;
 
-        if (append_ae_base(&map->data, sizeof(ae_base), AETHER_BUCKET_ADD_SIZE, &bucket) != 0)
+        if (append_ae_base(&map->data, &ae_base_size, &bucket) != 0)
             return 2;
     }
 
     for (i = 0; i < old_size; i++)
     {
         ae_base *bucket = NULL;
-        if (get_pointer_ae_base(&map->data, sizeof(ae_base), i, (void **)(&bucket)) != 0)
+        if (get_pointer_ae_base(&map->data, &ae_base_size, i, (void **)(&bucket)) != 0)
             return 3;
 
         j = 0;
         ae_key_val kv;
         while (j < bucket->quant)
         {
-            if (get_ae_base(bucket, sizeof(ae_key_val), j, &kv) != 0)
+            if (get_ae_base(bucket, &ae_key_val_size, j, &kv) != 0)
                 return 4;
             if (kv.key != NULL)
             {
@@ -170,12 +169,12 @@ uint8_t resize_ae_map(ae_map *map)
                 }
                 else
                 {
-                    if (delete_ae_base(bucket, sizeof(ae_key_val), AETHER_BUCKET_ADD_SIZE, j, &kv) != 0)
+                    if (delete_ae_base(bucket, &ae_key_val_size, j, &kv) != 0)
                         return 5;
                     ae_base *bucket_to = NULL;
-                    if (get_pointer_ae_base(&map->data, sizeof(ae_base), index, (void **)(&bucket)) != 0)
+                    if (get_pointer_ae_base(&map->data, &ae_base_size, index, (void **)(&bucket_to)) != 0)
                         return 6;
-                    if (append_ae_base(bucket_to, sizeof(ae_key_val), AETHER_BUCKET_ADD_SIZE, &kv) != 0)
+                    if (append_ae_base(bucket_to, &ae_key_val_size, &kv) != 0)
                         return 7;
                 }
             }
@@ -202,14 +201,14 @@ uint8_t set_ae_map(ae_map *map, const char *key, void *par)
         return 3;
 
     ae_base *bucket;
-    if (get_pointer_ae_base(&map->data, sizeof(ae_base), res.index, (void **)(&bucket)) != 0)
+    if (get_pointer_ae_base(&map->data, &ae_base_size, res.index, (void **)(&bucket)) != 0)
         return 4;
 
     ae_key_val kv;
 
     if (res.result == true)
     {
-        if (get_ae_base(bucket, sizeof(ae_key_val), res.bucket_index, &kv) != 0)
+        if (get_ae_base(bucket, &ae_key_val_size, res.bucket_index, &kv) != 0)
             return 5;
 
         memmove(kv.value, par, map->data_size);
@@ -218,7 +217,7 @@ uint8_t set_ae_map(ae_map *map, const char *key, void *par)
     {
         if (create_ae_key_val(&kv, key, par, map->data_size) != 0)
             return 6;
-        if (append_ae_base(bucket, sizeof(ae_key_val), AETHER_BUCKET_ADD_SIZE, &kv) != 0)
+        if (append_ae_base(bucket, &ae_key_val_size, &kv) != 0)
             return 7;
         map->occupancy++;
     }
@@ -237,7 +236,7 @@ uint8_t find_key_ae_map(ae_map *map, const char *key, ae_return_key_val *res)
     res->index = map->hash_func(key) % map->max_size;
 
     ae_base *bucket;
-    if (get_pointer_ae_base(&map->data, sizeof(ae_base), res->index, (void **)(&bucket)) != 0)
+    if (get_pointer_ae_base(&map->data, &ae_base_size, res->index, (void **)(&bucket)) != 0)
         return 3;
 
     ae_key_val kv;
@@ -246,7 +245,7 @@ uint8_t find_key_ae_map(ae_map *map, const char *key, ae_return_key_val *res)
 
     for (res->bucket_index = 0; res->bucket_index < bucket->quant; res->bucket_index++)
     {
-        if (get_ae_base(bucket, sizeof(ae_key_val), res->bucket_index, &kv) != 0)
+        if (get_ae_base(bucket, &ae_key_val_size, res->bucket_index, &kv) != 0)
             return 4;
 
         if ((strlen(kv.key) == strlen(key)) && memcmp(key, kv.key, strlen(key) * sizeof(uint8_t)) == 0)
@@ -282,11 +281,11 @@ uint8_t get_ae_map(ae_map *map, const char *key, void *par)
     if (res.result == true)
     {
         ae_base *bucket;
-        if (get_pointer_ae_base(&map->data, sizeof(ae_base), res.index, (void **)(&bucket)) != 0)
+        if (get_pointer_ae_base(&map->data, &ae_base_size, res.index, (void **)(&bucket)) != 0)
             return 3;
 
         ae_key_val kv;
-        if (get_ae_base(bucket, sizeof(ae_key_val), res.bucket_index, &kv) != 0)
+        if (get_ae_base(bucket, &ae_key_val_size, res.bucket_index, &kv) != 0)
             return 4;
 
         memmove(par, kv.value, map->data_size);
@@ -312,11 +311,11 @@ uint8_t delete_ae_map(ae_map *map, const char *key, void *par)
     if (res.result == true)
     {
         ae_base *bucket;
-        if (get_pointer_ae_base(&map->data, sizeof(ae_base), res.index, (void **)(&bucket)) != 0)
+        if (get_pointer_ae_base(&map->data, &ae_base_size, res.index, (void **)(&bucket)) != 0)
             return 3;
 
         ae_key_val kv;
-        if (delete_ae_base(bucket, sizeof(ae_key_val), AETHER_BUCKET_ADD_SIZE, res.bucket_index, &kv) != 0)
+        if (delete_ae_base(bucket, &ae_key_val_size, res.bucket_index, &kv) != 0)
             return 4;
         if (par != NULL)
             memmove(par, kv.value, map->data_size);
@@ -349,12 +348,12 @@ ae_vector get_keys_ae_map(ae_map *map)
     for (i = 0; i < map->data.quant; i++)
     {
         ae_base *bucket;
-        if (get_pointer_ae_base(&map->data, sizeof(ae_base), i, (void **)(&bucket)) != 0)
+        if (get_pointer_ae_base(&map->data, &ae_base_size, i, (void **)(&bucket)) != 0)
             return vector;
         ae_key_val kv;
         for (j = 0; j < bucket->quant; j++)
         {
-            if (get_ae_base(bucket, sizeof(ae_key_val), j, &kv) != 0)
+            if (get_ae_base(bucket, &ae_key_val_size, j, &kv) != 0)
                 return vector;
             if (kv.key != NULL)
             {
