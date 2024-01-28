@@ -1,6 +1,27 @@
 #include "aether_base.h"
 #include <math.h>
 
+static inline size_t find_next_power_of_2(size_t n)
+{
+    if (n == 0)
+        return 1;
+    else if (n == 1)
+        return 2;
+    else
+    {
+        n--;
+
+        n |= n >> 1;
+        n |= n >> 2;
+        n |= n >> 4;
+        n |= n >> 8;
+        n |= n >> 16;
+        n |= n >> 32;
+
+        return ++n;
+    }
+}
+
 uint8_t check_realloc_ae_base(ae_base *const base, const size_t *const data_size, size_t new_size, AE_BASE_MEM type)
 {
     uint8_t check = 0;
@@ -8,21 +29,20 @@ uint8_t check_realloc_ae_base(ae_base *const base, const size_t *const data_size
     switch (type)
     {
     case AE_BASE_RECOUNT:
-    case AE_BASE_INCR:
-        check = new_size >= base->max_quant;
+        check = new_size > base->max_quant;
         if (check)
-            while (base->max_quant < new_size)
-                base->max_quant *= 2;
+            base->max_quant = find_next_power_of_2(new_size);
+        break;
+    case AE_BASE_INCR:
+        check = new_size > base->max_quant;
+        if (check)
+            base->max_quant *= 2;
         break;
 
     case AE_BASE_DECR:
-        check = new_size <= base->max_quant / 8;
+        check = new_size < base->max_quant / 8;
         if (check)
-        {
-            if (base->max_quant > AETHER_BASE_ADD_SIZE)
-                while (base->max_quant > new_size && base->max_quant > AETHER_BASE_ADD_SIZE)
-                    base->max_quant /= 2;
-        }
+            base->max_quant /= 2;
         break;
 
     default:
@@ -58,8 +78,10 @@ ae_base init_ae_base(void)
 
 uint8_t create_ae_base(ae_base *const base, const size_t *const data_size, size_t new_size)
 {
-    while (base->max_quant < new_size)
-        base->max_quant *= 2;
+    if (new_size == 0)
+        base->max_quant = AETHER_BASE_ADD_SIZE;
+    else
+        base->max_quant = find_next_power_of_2(new_size);
     base->memory = calloc(base->max_quant, *data_size);
 
     if (base->memory == NULL)

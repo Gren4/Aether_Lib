@@ -7,7 +7,7 @@ typedef struct
 {
     ae_base data;
     size_t occupancy;
-    size_t max_size;
+    size_t element_size;
     size_t data_size;
     size_t (*hash_func)(const char *, size_t key_l);
 } ae_map;

@@ -33,6 +33,7 @@ int comp(const void *a, const void *b)
 
 int main(void)
 {
+
     clock_t tic, toc;
 
     size_t buf = 1;
@@ -66,10 +67,9 @@ int main(void)
     char str[80];
     buf = 0;
     size_t key = 0;
-    for (size_t i = 0; i < 100; i++)
+    for (size_t i = 0; i < 1000000; i++)
     {
-        sprintf(str, "%lld", i);
-        set_ae_map(&map, (const char *)&str, strlen(str),&buf);
+        set_ae_map(&map, (const char *)&key, sizeof(key),&buf);
         buf++;
         key++;
     }
@@ -78,20 +78,23 @@ int main(void)
     printf("Execution time: %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);
     printf("\n");
 
-    sprintf(str, "%lld", 121);
-    delete_ae_map(&map, (const char *)&str, strlen(str), &buf);
-
-    sprintf(str, "%lld", 121);
-    if (has_key_ae_map(&map, (const char *)&str, strlen(str)))
+    key = 121;
+    if (has_key_ae_map(&map, (const char *)&key, sizeof(key)))
         printf("121 bus\n");
     else
         printf("121 no bus\n");
 
-    sprintf(str, "%lld", 99);
-    if (has_key_ae_map(&map, (const char *)&str, strlen(str)))
+    key = 99;
+    if (has_key_ae_map(&map, (const char *)&key, sizeof(key)))
         printf("99 bus\n");
     else
         printf("99 no bus\n");
+
+    key = 999999;
+    if (has_key_ae_map(&map, (const char *)&key, sizeof(key)))
+        printf("999999 bus\n");
+    else
+        printf("999999 no bus\n");
 
     free_ae_map(&map);
 
