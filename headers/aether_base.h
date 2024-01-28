@@ -20,10 +20,8 @@ typedef struct ae_base
 {
     void *memory;
     size_t quant;
-    uint8_t power;
+    size_t max_quant;
 } ae_base;
-
-void calc_power_ae_base(AE_BASE_MEM type, uint8_t *power, size_t size);
 
 uint8_t check_realloc_ae_base(ae_base *const base, const size_t *const data_size, size_t new_size, AE_BASE_MEM type);
 
@@ -34,6 +32,10 @@ uint8_t create_ae_base(ae_base *const base, const size_t *const data_size, size_
 uint8_t free_ae_base(ae_base *const base);
 
 uint8_t resize_ae_base(ae_base *const base, const size_t *const data_size, size_t new_size);
+
+size_t current_max_size_ae_base(ae_base *const base);
+
+uint8_t append_return_ae_base(ae_base *const base, const size_t *const data_size, void **par);
 
 uint8_t append_ae_base(ae_base *const base, const size_t *const data_size, void *par);
 

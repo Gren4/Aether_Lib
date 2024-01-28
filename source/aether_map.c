@@ -3,24 +3,23 @@
 const size_t ae_base_size = sizeof(ae_base);
 const size_t ae_key_val_size = sizeof(ae_key_val);
 
-size_t hash_function(const char *key)
+size_t hash_function(const char *key, size_t len)
 {
     /* djb2 */
     size_t hash = 5381;
-    size_t c;
 
-    while ((c = *key++))
-        hash = ((hash << 5) + hash) + c;
+    for (size_t i = 0; i < len; i++)
+        hash = ((hash << 5) + hash) + key[i];
 
     return hash;
 }
 
-ae_map create_ae_map(size_t data_size, size_t (*func)(const char *))
+ae_map create_ae_map(size_t data_size, size_t (*func)(const char *, size_t len))
 {
     ae_map new_map = {
         .data = init_ae_base(),
         .data_size = data_size,
-        .max_size = AETHER_MAP_ADD_SIZE,
+        .max_size = AETHER_BASE_ADD_SIZE,
         .occupancy = 0};
 
     if (func == NULL)
@@ -33,16 +32,16 @@ ae_map create_ae_map(size_t data_size, size_t (*func)(const char *))
     return new_map;
 }
 
-void prepare_ae_map(ae_map *map, size_t (*func)(const char *))
+void prepare_ae_map(ae_map *map, size_t (*func)(const char *, size_t len))
 {
-    if (create_ae_base(&map->data, &ae_base_size, AETHER_MAP_ADD_SIZE) != 0)
+    if (create_ae_base(&map->data, &ae_base_size, AETHER_BASE_ADD_SIZE) != 0)
         return;
 
     size_t i = 0;
-    for (i = 0; i < AETHER_MAP_ADD_SIZE; i++)
+    for (i = 0; i < AETHER_BASE_ADD_SIZE; i++)
     {
         ae_base bucket = init_ae_base();
-        if (create_ae_base(&bucket, &ae_key_val_size, AETHER_MAP_ADD_SIZE) != 0)
+        if (create_ae_base(&bucket, &ae_key_val_size, AETHER_BASE_ADD_SIZE) != 0)
             return;
 
         if (append_ae_base(&map->data, &ae_base_size, &bucket) != 0)
@@ -141,7 +140,7 @@ uint8_t resize_ae_map(ae_map *map)
     for (i = map->max_size; i < new_size; i++)
     {
         ae_base bucket = init_ae_base();
-        if (create_ae_base(&bucket, &ae_key_val_size, AETHER_MAP_ADD_SIZE) != 0)
+        if (create_ae_base(&bucket, &ae_key_val_size, AETHER_BASE_ADD_SIZE) != 0)
             return 1;
 
         if (append_ae_base(&map->data, &ae_base_size, &bucket) != 0)
@@ -162,7 +161,7 @@ uint8_t resize_ae_map(ae_map *map)
                 return 4;
             if (kv.key != NULL)
             {
-                size_t index = map->hash_func(kv.key) % new_size;
+                size_t index = map->hash_func(kv.key, strlen(kv.key)) % new_size;
                 if (index == i)
                 {
                     j++;
@@ -233,7 +232,7 @@ uint8_t find_key_ae_map(ae_map *map, const char *key, ae_return_key_val *res)
     if (map->data.memory == NULL)
         return 2;
 
-    res->index = map->hash_func(key) % map->max_size;
+    res->index = map->hash_func(key, strlen(key)) % map->max_size;
 
     ae_base *bucket;
     if (get_pointer_ae_base(&map->data, &ae_base_size, res->index, (void **)(&bucket)) != 0)

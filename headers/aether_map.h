@@ -9,7 +9,7 @@ typedef struct
     size_t occupancy;
     size_t max_size;
     size_t data_size;
-    size_t (*hash_func)(const char *);
+    size_t (*hash_func)(const char *, size_t);
 } ae_map;
 
 typedef struct
@@ -25,11 +25,11 @@ typedef struct
     bool result;
 } ae_return_key_val;
 
-size_t hash_function(const char *key);
+size_t hash_function(const char *key, size_t len);
 
-ae_map create_ae_map(size_t data_size, size_t (*func)(const char *));
+ae_map create_ae_map(size_t data_size, size_t (*func)(const char *, size_t len));
 
-void prepare_ae_map(ae_map *map, size_t (*func)(const char *));
+void prepare_ae_map(ae_map *map, size_t (*func)(const char *, size_t len));
 
 uint8_t free_ae_map(ae_map *map);
 

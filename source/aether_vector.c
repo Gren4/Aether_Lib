@@ -6,16 +6,9 @@ ae_vector create_ae_vector(size_t data_size, size_t quant)
         .data = init_ae_base(),
         .data_size = data_size};
 
-    prepare_ae_vector(&new_vector, quant);
+    create_ae_base(&new_vector.data, &new_vector.data_size, quant);
 
     return new_vector;
-}
-
-void prepare_ae_vector(ae_vector *const vector, size_t quant)
-{
-    create_ae_base(&vector->data, &vector->data_size, quant);
-
-    return;
 }
 
 uint8_t free_ae_vector(ae_vector *const vector)

@@ -11,8 +11,6 @@ typedef struct ae_vector
 
 ae_vector create_ae_vector(size_t data_size, size_t quant);
 
-void prepare_ae_vector(ae_vector *const vector, size_t quant);
-
 uint8_t free_ae_vector(ae_vector *const vector);
 
 uint8_t resize_ae_vector(ae_vector *const vector, size_t new_size);

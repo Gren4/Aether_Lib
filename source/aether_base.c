@@ -1,48 +1,28 @@
 #include "aether_base.h"
 #include <math.h>
 
-void calc_power_ae_base(AE_BASE_MEM type, uint8_t *power, size_t size)
-{
-    switch (type)
-    {
-    case AE_BASE_RECOUNT:
-        *power = 0;
-    case AE_BASE_INCR:
-        while (AETHER_BASE_ADD_SIZE * pow(2, *power) <= size)
-        {
-            *power += 1;
-        }
-        break;
-
-    case AE_BASE_DECR:
-        while (AETHER_BASE_ADD_SIZE * pow(2, *power) > size && *power != 0)
-        {
-            *power -= 1;
-        }
-        *power += 1;
-        break;
-
-    default:
-        break;
-    }
-
-    return;
-}
-
 uint8_t check_realloc_ae_base(ae_base *const base, const size_t *const data_size, size_t new_size, AE_BASE_MEM type)
 {
-    size_t cur_size = AETHER_BASE_ADD_SIZE * (int)(pow(2, base->power) + 0.5);
     uint8_t check = 0;
 
     switch (type)
     {
     case AE_BASE_RECOUNT:
     case AE_BASE_INCR:
-        check = new_size >= cur_size;
+        check = new_size >= base->max_quant;
+        if (check)
+            while (base->max_quant < new_size)
+                base->max_quant *= 2;
         break;
 
     case AE_BASE_DECR:
-        check = new_size <= cur_size / 8;
+        check = new_size <= base->max_quant / 8;
+        if (check)
+        {
+            if (base->max_quant > AETHER_BASE_ADD_SIZE)
+                while (base->max_quant > new_size && base->max_quant > AETHER_BASE_ADD_SIZE)
+                    base->max_quant /= 2;
+        }
         break;
 
     default:
@@ -51,8 +31,7 @@ uint8_t check_realloc_ae_base(ae_base *const base, const size_t *const data_size
 
     if (check)
     {
-        calc_power_ae_base(type, &base->power, new_size);
-        void *p = realloc(base->memory, AETHER_BASE_ADD_SIZE * (int)(pow(2, base->power) + 0.5) * (*data_size));
+        void *p = realloc(base->memory, base->max_quant * (*data_size));
 
         if (p == NULL)
             return 1;
@@ -72,15 +51,16 @@ ae_base init_ae_base(void)
     ae_base new_base = {
         .memory = NULL,
         .quant = 0,
-        .power = 0};
+        .max_quant = AETHER_BASE_ADD_SIZE};
 
     return new_base;
 }
 
 uint8_t create_ae_base(ae_base *const base, const size_t *const data_size, size_t new_size)
 {
-    calc_power_ae_base(AE_BASE_INCR, &base->power, new_size);
-    base->memory = calloc(AETHER_BASE_ADD_SIZE * (int)(pow(2, base->power) + 0.5), *data_size);
+    while (base->max_quant < new_size)
+        base->max_quant *= 2;
+    base->memory = calloc(base->max_quant, *data_size);
 
     if (base->memory == NULL)
         return 1;
@@ -96,6 +76,8 @@ uint8_t create_ae_base(ae_base *const base, const size_t *const data_size, size_
 
 uint8_t free_ae_base(ae_base *const base)
 {
+    if (base == NULL)
+        return 1;
 #ifdef DEBUG_AE
     printf("Freed memory at address %p\n", base->memory);
 #endif
@@ -121,12 +103,32 @@ uint8_t resize_ae_base(ae_base *const base, const size_t *const data_size, size_
     return 0;
 }
 
-uint8_t append_ae_base(ae_base *const base, const size_t *const data_size, void *par)
+size_t current_max_size_ae_base(ae_base *const base)
+{
+    return base->max_quant;
+}
+
+uint8_t append_return_ae_base(ae_base *const base, const size_t *const data_size, void **par)
 {
     size_t new_size = base->quant + 1;
     if (check_realloc_ae_base(base, data_size, new_size, AE_BASE_INCR) != 0)
         return 4;
 
+    memset(base->memory + base->quant * (*data_size), 0, *data_size);
+
+    if (par != NULL)
+        *par = base->memory + base->quant * (*data_size);
+
+    base->quant++;
+
+    return 0;
+}
+
+uint8_t append_ae_base(ae_base *const base, const size_t *const data_size, void *par)
+{
+    size_t new_size = base->quant + 1;
+    if (check_realloc_ae_base(base, data_size, new_size, AE_BASE_INCR) != 0)
+        return 4;
     memmove(base->memory + base->quant * (*data_size), par, *data_size);
 
     base->quant++;
