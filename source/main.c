@@ -58,7 +58,7 @@ int main(void)
     free_ae_vector(&vec);
 
     tic = clock();
-    ae_map map = create_ae_map(sizeof(size_t), 0, NULL);
+    ae_map map = create_ae_map(sizeof(size_t), 1000000, NULL);
     toc = clock();
     printf("Execution time: %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);
     printf("\n");
@@ -96,6 +96,20 @@ int main(void)
     else
         printf("999999 no bus\n");
 
+    key = 1999999;
+    if (has_key_ae_map(&map, (const char *)&key, sizeof(key)))
+        printf("1999999 bus\n");
+    else
+        printf("1999999 no bus\n");
+
+    key = 0;
+    for (size_t i = 0; i < 1000000; i++)
+    {
+        get_ae_map(&map, (const char *)&key, sizeof(key), &buf);
+        if (key != buf)
+            printf("key %lld contains %lld\n", key, buf);
+        key++;
+    }
     free_ae_map(&map);
 
     return 0;

@@ -18,22 +18,66 @@ const size_t uint32_t_size = sizeof(uint32_t);
 #define P_KEY_AE(kv)        (kv + uint8_t_size)
 #define P_DATA_AE(kv)       (kv + uint8_t_size + uint32_t_size)
 
-static size_t hash_function(const char *key, size_t key_l)
+static size_t hash_function(const char *key, size_t len)
 {
-    /* djb2 */
+      const size_t m = 0x5bd1e995;
+  const size_t seed = 0;
+  const int r = 24;
+
+  size_t h = seed ^ len;
+
+  const unsigned char * data = (const unsigned char *)key;
+  size_t k = 0;
+
+  while (len >= 4)
+  {
+      k  = data[0];
+      k |= data[1] << 8;
+      k |= data[2] << 16;
+      k |= data[3] << 24;
+
+      k *= m;
+      k ^= k >> r;
+      k *= m;
+
+      h *= m;
+      h ^= k;
+
+      data += 4;
+      len -= 4;
+  }
+
+  switch (len)
+  {
+    case 3:
+      h ^= data[2] << 16;
+    case 2:
+      h ^= data[1] << 8;
+    case 1:
+      h ^= data[0];
+      h *= m;
+  };
+
+  h ^= h >> 13;
+  h *= m;
+  h ^= h >> 15;
+
+  return h;
+    /*
+    // djb2
     size_t hash = 5381;
 
-    for (size_t i = 0; i < key_l; i++)
+    for (size_t i = 0; i < len; i++)
     {
         hash = ((hash << 5) + hash) + key[i];
     }
 
     return hash;
+    */
 }
 
 static uint32_t key_function(const char *key, size_t len)
 {
-  /* MurmurHash2 */
   const uint32_t m = 0x5bd1e995;
   const uint32_t seed = 0;
   const int r = 24;
@@ -92,8 +136,7 @@ ae_map create_ae_map(size_t data_size, size_t quant, size_t (*func)(const char *
     else
         new_map.hash_func = func;
 
-    create_ae_base(&new_map.data, &new_map.element_size, quant);
-    new_map.data.quant = new_map.data.max_quant;
+    create_max_size_ae_base(&new_map.data, &new_map.element_size, quant);
 
     return new_map;
 }
@@ -148,8 +191,7 @@ uint8_t set_ae_map(ae_map *map, const char *key, size_t key_l, void *par)
 uint8_t resize_ae_map(ae_map *map)
 {
     ae_base new_base = init_ae_base();
-    create_ae_base(&new_base, &map->element_size, 4 * map->data.max_quant);
-    new_base.quant = new_base.max_quant;
+    create_max_size_ae_base(&new_base, &map->element_size, 4 * map->data.max_quant);
 
     void *kv;
 
@@ -265,8 +307,6 @@ bool has_key_ae_map(ae_map *map, const char *key, size_t key_l)
         {
             if (KEY_AE(kv) == h_key)
             {
-                memset(P_STATUS_AE(kv), DELETED_AE, map->data_size);
-                map->occupancy--;
                 return true;
             }
         }

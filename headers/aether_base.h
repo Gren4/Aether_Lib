@@ -29,6 +29,8 @@ ae_base init_ae_base(void);
 
 uint8_t create_ae_base(ae_base *const base, const size_t *const data_size, size_t new_size);
 
+uint8_t create_max_size_ae_base(ae_base *const base, const size_t *const data_size, size_t new_size);
+
 uint8_t free_ae_base(ae_base *const base);
 
 uint8_t resize_ae_base(ae_base *const base, const size_t *const data_size, size_t new_size);

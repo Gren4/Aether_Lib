@@ -96,6 +96,26 @@ uint8_t create_ae_base(ae_base *const base, const size_t *const data_size, size_
     return 0;
 }
 
+uint8_t create_max_size_ae_base(ae_base *const base, const size_t *const data_size, size_t new_size)
+{
+    if (new_size == 0)
+        base->max_quant = AETHER_BASE_ADD_SIZE;
+    else
+        base->max_quant = find_next_power_of_2(new_size);
+    base->memory = calloc(base->max_quant, *data_size);
+
+    if (base->memory == NULL)
+        return 1;
+
+#ifdef DEBUG_AE
+    printf("Allocated memory at address %p\n", base->memory);
+#endif
+
+    base->quant = base->max_quant;
+
+    return 0;
+}
+
 uint8_t free_ae_base(ae_base *const base)
 {
     if (base == NULL)
