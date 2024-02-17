@@ -28,6 +28,10 @@ uint8_t check_realloc_ae_base(ae_base *const base, const size_t *const data_size
 
     switch (type)
     {
+    case AE_RESIZE:
+        check = 1;
+        base->max_quant = find_next_power_of_2(new_size);
+        break;
     case AE_BASE_RECOUNT:
         check = new_size > base->max_quant;
         if (check)
@@ -134,7 +138,7 @@ uint8_t resize_ae_base(ae_base *const base, const size_t *const data_size, size_
     if (new_size == base->quant)
         return 0;
 
-    if (check_realloc_ae_base(base, data_size, new_size, AE_BASE_RECOUNT) != 0)
+    if (check_realloc_ae_base(base, data_size, new_size, AE_RESIZE) != 0)
         return 1;
 
     if (new_size > base->quant)
@@ -203,6 +207,24 @@ uint8_t set_ae_base(ae_base *const base, const size_t *const data_size, size_t i
         return 1;
 
     memmove(base->memory + i * (*data_size), par, *data_size);
+
+    return 0;
+}
+
+uint8_t set_base_ae_base(ae_base *const base_to, ae_base *const base_from, const size_t *const data_size, size_t i_to, size_t i_from, size_t n)
+{
+    if (i_to < 0 || i_to >= base_to->quant)
+        return 1;
+    if (i_from < 0 || i_from >= base_from->quant)
+        return 2;
+
+    if ((base_from->quant - i_from) < n)
+        n = base_from->quant - i_from;
+
+    if ((base_to->quant - i_to < n))
+        n = base_to->quant - i_to;
+
+    memmove(base_to->memory + i_to * (*data_size), base_from->memory + i_from * (*data_size), n * (*data_size));
 
     return 0;
 }

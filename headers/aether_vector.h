@@ -21,6 +21,8 @@ uint8_t append_vector_ae_vector(ae_vector *const vector_to, ae_vector *const vec
 
 uint8_t set_ae_vector(ae_vector *const vector, size_t i, void *par);
 
+uint8_t set_vector_ae_vector(ae_vector *const vector_to, ae_vector *const vector_from, size_t i_to, size_t i_from, size_t n);
+
 uint8_t get_ae_vector(const ae_vector *const vector, size_t i, void *par);
 
 uint8_t get_pointer_ae_vector(const ae_vector *const vector, size_t i, void **par);

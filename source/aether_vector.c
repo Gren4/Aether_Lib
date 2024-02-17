@@ -52,6 +52,17 @@ uint8_t set_ae_vector(ae_vector *const vector, size_t i, void *par)
     return 0;
 }
 
+uint8_t set_vector_ae_vector(ae_vector *const vector_to, ae_vector *const vector_from, size_t i_to, size_t i_from, size_t n)
+{
+    if (vector_to->data_size != vector_from->data_size)
+        return 1;
+
+    if (set_base_ae_base(&vector_to->data, &vector_from->data, &vector_to->data_size, i_to, i_from, n) != 0)
+        return 2;
+
+    return 0;
+}
+
 uint8_t get_ae_vector(const ae_vector *const vector, size_t i, void *par)
 {
     if (get_ae_base(&vector->data, &vector->data_size, i, par) != 0)

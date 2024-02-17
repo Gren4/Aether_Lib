@@ -3,8 +3,6 @@
 
 #include "aether_vector.h"
 #include "aether_map.h"
-#include "aether_stack.h"
-#include "aether_queue.h"
 #include "aether_deque.h"
 
 #endif // __AETHER_LIB__

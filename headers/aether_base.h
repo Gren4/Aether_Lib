@@ -13,7 +13,8 @@ typedef enum
 {
     AE_BASE_INCR,
     AE_BASE_DECR,
-    AE_BASE_RECOUNT
+    AE_BASE_RECOUNT,
+    AE_RESIZE
 } AE_BASE_MEM;
 
 typedef struct ae_base
@@ -44,6 +45,8 @@ uint8_t append_ae_base(ae_base *const base, const size_t *const data_size, void 
 uint8_t append_base_ae_base(ae_base *const base_to, ae_base *const base_from, const size_t *const data_size, size_t i, size_t n);
 
 uint8_t set_ae_base(ae_base *const base, const size_t *const data_size, size_t i, void *par);
+
+uint8_t set_base_ae_base(ae_base *const base_to, ae_base *const base_from, const size_t *const data_size, size_t i_to, size_t i_from, size_t n);
 
 uint8_t get_ae_base(const ae_base *const base, const size_t *const data_size, size_t i, void *par);
 

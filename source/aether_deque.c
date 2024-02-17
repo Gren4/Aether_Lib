@@ -1,16 +1,17 @@
 #include "aether_deque.h"
 
-const size_t void_p_size = sizeof(void *);
+const size_t pointer_size = sizeof(size_t);
 
 ae_deque create_ae_deque(size_t data_size)
 {
     ae_deque new_deque = {
         .pointers = init_ae_base(),
+        .blocks = init_ae_base(),
         .data_size = data_size,
         .front_i = -1,
         .back_i = -1,
-        .front_block = 1,
-        .back_block = 1};
+        .front_block = AETHER_DEQUE_ADD_SIZE / 2,
+        .back_block = AETHER_DEQUE_ADD_SIZE / 2};
 
     prepare_ae_deque(&new_deque);
 
@@ -19,41 +20,121 @@ ae_deque create_ae_deque(size_t data_size)
 
 void prepare_ae_deque(ae_deque *deque)
 {
-    if (deque == NULL)
+    if (create_ae_base(&deque->pointers, &pointer_size, AETHER_DEQUE_ADD_SIZE) != 0)
         return;
-    if (create_ae_base(&deque->pointers, &void_p_size, AETHER_DEQUE_ADD_SIZE) != 0)
+    if (create_max_size_ae_base(&deque->blocks, &deque->data_size, AETHER_DEQUE_ADD_SIZE * AETHER_BLOCKS_ADD_SIZE) != 0)
         return;
-    size_t i;
-    for (i = 0; i < 2; i++)
+    for (size_t i = 0; i < AETHER_DEQUE_ADD_SIZE; i++)
     {
-        void *link_array = calloc(AETHER_LINK_ARRAY_ADD_SIZE, deque->data_size);
-        if (link_array == NULL)
-        {
-            free_ae_base(&deque->pointers);
+        if (append_ae_base(&deque->pointers, &pointer_size, &i) != 0)
             return;
-        }
-        if (append_ae_base(&deque->pointers, &void_p_size, &link_array) != 0)
-        {
-#ifdef DEBUG_AE
-            printf("Freed memory at address %p\n", link_array);
-#endif
-            free(link_array);
-            free_ae_base(&deque->pointers);
-            return;
-        }
-#ifdef DEBUG_AE
-        printf("Allocated memory at address %p\n", link_array);
-#endif
     }
     return;
 }
 
+uint8_t free_ae_deque(ae_deque *deque)
+{
+    if (deque->pointers.memory != NULL)
+        free_ae_base(&deque->pointers);
+    if (deque->blocks.memory != NULL)
+        free_ae_base(&deque->blocks);
+
+    return 0;
+}
+
+uint8_t reorganize_ae_deque(ae_deque *deque)
+{
+    if (deque->pointers.max_quant >= 16)
+    {
+        if (deque->front_block >= (deque->pointers.max_quant * 3) / 4)
+        {
+            size_t num_blocks = deque->back_block - deque->front_block + 1;
+
+            size_t center = deque->pointers.max_quant / 2 - 1;
+            size_t from;
+            size_t to;
+
+            for (size_t i = 0; i < num_blocks; i++)
+            {
+                get_ae_base(&deque->pointers, &pointer_size, i + deque->front_block, &from);
+                get_ae_base(&deque->pointers, &pointer_size, i + center, &to);
+                set_base_ae_base(&deque->blocks, &deque->blocks, &deque->data_size, to * deque->data_size, from * deque->data_size, AETHER_BLOCKS_ADD_SIZE);
+            }
+
+            deque->front_block = center;
+            deque->back_block = deque->front_block + num_blocks - 1;
+
+            return 1;
+        }
+        else if (deque->back_block <= (deque->pointers.max_quant) / 4)
+        {
+            size_t num_blocks = deque->back_block - deque->front_block + 1;
+
+            size_t center = deque->pointers.max_quant / 2;
+            size_t from;
+            size_t to;
+            for (size_t i = 0; i < num_blocks; i++)
+            {
+                get_ae_base(&deque->pointers, &pointer_size, deque->back_block - i, &from);
+                get_ae_base(&deque->pointers, &pointer_size, center - i, &to);
+                set_base_ae_base(&deque->blocks, &deque->blocks, &deque->data_size, to * deque->data_size, from * deque->data_size, AETHER_BLOCKS_ADD_SIZE);
+            }
+
+            deque->back_block = center;
+            deque->front_block = deque->back_block - num_blocks + 1;
+
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+uint8_t resize_ae_deque(ae_deque *deque)
+{
+    if (reorganize_ae_deque(deque) == 0)
+    {
+        size_t old_size_blocks = deque->pointers.max_quant;
+        {
+            size_t offset = old_size_blocks / 2;
+            deque->front_block += offset;
+            deque->back_block += offset;
+            resize_ae_base(&deque->pointers, &pointer_size, deque->pointers.max_quant * 2);
+            memmove(deque->pointers.memory + offset * pointer_size, deque->pointers.memory, old_size_blocks * pointer_size);
+        }
+        resize_ae_base(&deque->blocks, &deque->data_size, deque->pointers.max_quant * AETHER_BLOCKS_ADD_SIZE);
+        size_t it = (deque->pointers.max_quant - old_size_blocks) / 2;
+        size_t offset = it + deque->pointers.max_quant / 2;
+        size_t j = 0;
+        for (size_t i = 0; i < it; i++)
+        {
+            j = old_size_blocks + i;
+            if (set_ae_base(&deque->pointers, &pointer_size, i, &j) != 0)
+                return 1;
+            j = old_size_blocks + i + it;
+            if (set_ae_base(&deque->pointers, &pointer_size, i + offset, &j) != 0)
+                return 2;
+        }
+    }
+    return 0;
+}
+
+uint8_t minimize_ae_deque(ae_deque *deque)
+{
+    reorganize_ae_deque(deque);
+
+/*
+    if (deque->blocks.max_quant / (deque->back_block - deque->front_block + 1) >= 8)
+    {
+        resize_ae_base(&deque->pointers, &pointer_size, deque->pointers.max_quant / 2);
+        resize_ae_base(&deque->blocks, &deque->data_size, deque->pointers.max_quant * AETHER_BLOCKS_ADD_SIZE);
+    }
+*/
+    return 0;
+}
+
 uint8_t push_front_ae_deque(ae_deque *deque, void *par)
 {
-    if (deque == NULL)
-        return 1;
-    if (deque->pointers.memory == NULL)
-        return 2;
     if (deque->front_i == -1 && deque->back_i == -1)
     {
         deque->front_i = 0;
@@ -64,65 +145,29 @@ uint8_t push_front_ae_deque(ae_deque *deque, void *par)
         if (deque->front_i == 0)
         {
             if (deque->front_block == 0)
-                if (create_front_array_link_ae_deque(deque) != 0)
-                    return 3;
+                if (resize_ae_deque(deque) != 0)
+                    return 1;
             deque->front_block--;
         }
-        deque->front_i = deque->front_i == 0 ? AETHER_LINK_ARRAY_ADD_SIZE - 1 : deque->front_i - 1;
+        deque->front_i = deque->front_i == 0 ? AETHER_BLOCKS_ADD_SIZE - 1 : deque->front_i - 1;
     }
-    void *link_array;
-    if (get_ae_base(&deque->pointers, &void_p_size, deque->front_block, &link_array) != 0)
+    size_t pointer;
+    if (get_ae_base(&deque->pointers, &pointer_size, deque->front_block, &pointer) != 0)
         return 4;
-    memmove(link_array + deque->front_i * deque->data_size, par, deque->data_size);
-
-    return 0;
-}
-
-uint8_t push_back_ae_deque(ae_deque *deque, void *par)
-{
-    if (deque == NULL)
-        return 1;
-    if (deque->pointers.memory == NULL)
-        return 2;
-    if (deque->front_i == -1 && deque->back_i == -1)
-    {
-        deque->front_i = 0;
-        deque->back_i = 0;
-    }
-    else
-    {
-        if (deque->back_i == AETHER_LINK_ARRAY_ADD_SIZE - 1)
-        {
-            if (deque->back_block == deque->pointers.quant - 1)
-            {
-                if (create_back_array_link_ae_deque(deque) != 0)
-                    return 3;
-            }
-            deque->back_block++;
-        }
-        deque->back_i = (deque->back_i + 1) % AETHER_LINK_ARRAY_ADD_SIZE;
-    }
-    void *link_array;
-    if (get_ae_base(&deque->pointers, &void_p_size, deque->back_block, &link_array) != 0)
-        return 4;
-    memmove(link_array + deque->back_i * deque->data_size, par, deque->data_size);
+    memmove(deque->blocks.memory + pointer * deque->data_size * AETHER_BLOCKS_ADD_SIZE + deque->front_i * deque->data_size, par, deque->data_size);
 
     return 0;
 }
 
 uint8_t pop_front_ae_deque(ae_deque *deque, void *par)
 {
-    if (deque == NULL)
-        return 1;
-    if (deque->pointers.memory == NULL)
-        return 2;
     if (deque->front_i == -1 && deque->back_i == -1)
-        return 3;
-    void *link_array;
-    if (get_ae_base(&deque->pointers, &void_p_size, deque->front_block, &link_array) != 0)
-        return 4;
+        return 1;
+    size_t pointer;
+    if (get_ae_base(&deque->pointers, &pointer_size, deque->front_block, &pointer) != 0)
+        return 2;
     if (par != NULL)
-        memmove(par, link_array + deque->front_i * deque->data_size, deque->data_size);
+        memmove(par, deque->blocks.memory + pointer * deque->data_size * AETHER_BLOCKS_ADD_SIZE + deque->front_i * deque->data_size, deque->data_size);
     if (deque->front_block == deque->back_block)
     {
         if (deque->front_i + 1 > deque->back_i)
@@ -137,32 +182,68 @@ uint8_t pop_front_ae_deque(ae_deque *deque, void *par)
     }
     else
     {
-        if (deque->front_i == AETHER_LINK_ARRAY_ADD_SIZE - 1)
+        if (deque->front_i == AETHER_BLOCKS_ADD_SIZE - 1)
         {
             deque->front_block++;
-            if (deque->front_block >= 2)
-                if (delete_front_array_link_ae_deque(deque) != 0)
-                    return 5;
+            minimize_ae_deque(deque);
         }
-        deque->front_i = (deque->front_i + 1) % AETHER_LINK_ARRAY_ADD_SIZE;
+        deque->front_i = (deque->front_i + 1) % AETHER_BLOCKS_ADD_SIZE;
     }
+
+    return 0;
+}
+
+uint8_t front_ae_deque(ae_deque *deque, void *par)
+{
+    if (deque->front_i == -1 && deque->back_i == -1)
+        return 1;
+    size_t pointer;
+    if (get_ae_base(&deque->pointers, &pointer_size, deque->front_block, &pointer) != 0)
+        return 2;
+    if (par == NULL)
+        return 3;
+    memmove(par, deque->blocks.memory + pointer * deque->data_size * AETHER_BLOCKS_ADD_SIZE + deque->front_i * deque->data_size, deque->data_size);
+
+    return 0;
+}
+
+uint8_t push_back_ae_deque(ae_deque *deque, void *par)
+{
+    if (deque->front_i == -1 && deque->back_i == -1)
+    {
+        deque->front_i = 0;
+        deque->back_i = 0;
+    }
+    else
+    {
+        if (deque->back_i == AETHER_BLOCKS_ADD_SIZE - 1)
+        {
+            if (deque->back_block == deque->pointers.quant - 1)
+            {
+                if (resize_ae_deque(deque) != 0)
+                    return 1;
+            }
+            deque->back_block++;
+        }
+        deque->back_i = (deque->back_i + 1) % AETHER_BLOCKS_ADD_SIZE;
+    }
+    size_t pointer;
+    if (get_ae_base(&deque->pointers, &pointer_size, deque->back_block, &pointer) != 0)
+        return 4;
+    memmove(deque->blocks.memory + pointer * deque->data_size * AETHER_BLOCKS_ADD_SIZE + deque->back_i * deque->data_size, par, deque->data_size);
 
     return 0;
 }
 
 uint8_t pop_back_ae_deque(ae_deque *deque, void *par)
 {
-    if (deque == NULL)
-        return 1;
-    if (deque->pointers.memory == NULL)
-        return 2;
     if (deque->front_i == -1 && deque->back_i == -1)
-        return 3;
-    void *link_array;
-    if (get_ae_base(&deque->pointers, &void_p_size, deque->back_block, &link_array) != 0)
-        return 4;
+        return 1;
+    size_t pointer;
+    if (get_ae_base(&deque->pointers, &pointer_size, deque->back_block, &pointer) != 0)
+        return 2;
     if (par != NULL)
-        memmove(par, link_array + deque->back_i * deque->data_size, deque->data_size);
+        memmove(par, deque->blocks.memory + pointer * deque->data_size * AETHER_BLOCKS_ADD_SIZE + deque->back_i * deque->data_size, deque->data_size);
     if (deque->front_block == deque->back_block)
     {
         if (deque->front_i > deque->back_i - 1)
@@ -180,390 +261,168 @@ uint8_t pop_back_ae_deque(ae_deque *deque, void *par)
         if (deque->back_i == 0)
         {
             deque->back_block--;
-            if (deque->back_block <= deque->pointers.quant - 3)
-                if (delete_back_array_link_ae_deque(deque) != 0)
-                    return 5;
+            minimize_ae_deque(deque);
         }
-        deque->back_i = deque->back_i == 0 ? AETHER_LINK_ARRAY_ADD_SIZE - 1 : deque->back_i - 1;
+        deque->back_i = deque->back_i == 0 ? AETHER_BLOCKS_ADD_SIZE - 1 : deque->back_i - 1;
     }
-
-    return 0;
-}
-
-uint8_t create_front_array_link_ae_deque(ae_deque *deque)
-{
-    if (deque == NULL)
-        return 1;
-    if (deque->pointers.memory == NULL)
-        return 2;
-    void *link_array = calloc(AETHER_LINK_ARRAY_ADD_SIZE, deque->data_size);
-    if (link_array == NULL)
-        return 3;
-    if (insert_ae_base(&deque->pointers, &void_p_size, 0, &link_array) != 0)
-    {
-#ifdef DEBUG_AE
-        printf("Freed memory at address %p\n", link_array);
-#endif
-        free(link_array);
-        return 4;
-    }
-#ifdef DEBUG_AE
-    printf("Allocated memory at address %p\n", link_array);
-#endif
-    deque->front_block++;
-    deque->back_block++;
-
-    return 0;
-}
-
-uint8_t create_back_array_link_ae_deque(ae_deque *deque)
-{
-    if (deque == NULL)
-        return 1;
-    if (deque->pointers.memory == NULL)
-        return 2;
-    void *link_array = calloc(AETHER_LINK_ARRAY_ADD_SIZE, deque->data_size);
-    if (link_array == NULL)
-        return 3;
-    if (append_ae_base(&deque->pointers, &void_p_size, &link_array) != 0)
-    {
-#ifdef DEBUG_AE
-        printf("Freed memory at address %p\n", link_array);
-#endif
-        free(link_array);
-        return 4;
-    }
-#ifdef DEBUG_AE
-    printf("Allocated memory at address %p\n", link_array);
-#endif
-
-    return 0;
-}
-
-uint8_t delete_front_array_link_ae_deque(ae_deque *deque)
-{
-    if (deque == NULL)
-        return 1;
-    if (deque->pointers.memory == NULL)
-        return 2;
-    void *link_array;
-    if (delete_ae_base(&deque->pointers, &void_p_size, 0, &link_array) != 0)
-    {
-        return 3;
-    }
-#ifdef DEBUG_AE
-    printf("Freed memory at address %p\n", link_array);
-#endif
-    free(link_array);
-    deque->front_block--;
-    deque->back_block--;
-
-    return 0;
-}
-
-uint8_t delete_back_array_link_ae_deque(ae_deque *deque)
-{
-    if (deque == NULL)
-        return 1;
-    if (deque->pointers.memory == NULL)
-        return 2;
-    void *link_array;
-    if (delete_ae_base(&deque->pointers, &void_p_size, deque->pointers.quant - 1, &link_array) != 0)
-    {
-        return 3;
-    }
-#ifdef DEBUG_AE
-    printf("Freed memory at address %p\n", link_array);
-#endif
-    free(link_array);
-
-    return 0;
-}
-
-uint8_t front_ae_deque(ae_deque *deque, void *par)
-{
-    if (deque == NULL)
-        return 1;
-    if (deque->pointers.memory == NULL)
-        return 2;
-    if (deque->front_i == -1 && deque->back_i == -1)
-        return 3;
-    void *link_array;
-    if (get_ae_base(&deque->pointers, &void_p_size, deque->front_block, &link_array) != 0)
-        return 4;
-    if (par == NULL)
-        return 5;
-    memmove(par, link_array + deque->front_i * deque->data_size, deque->data_size);
 
     return 0;
 }
 
 uint8_t back_ae_deque(ae_deque *deque, void *par)
 {
-    if (deque == NULL)
-        return 1;
-    if (deque->pointers.memory == NULL)
-        return 2;
     if (deque->front_i == -1 && deque->back_i == -1)
-        return 3;
-    void *link_array;
-    if (get_ae_base(&deque->pointers, &void_p_size, deque->back_block, &link_array) != 0)
-        return 4;
+        return 1;
+    size_t pointer;
+    if (get_ae_base(&deque->pointers, &pointer_size, deque->back_block, &pointer) != 0)
+        return 2;
     if (par == NULL)
-        return 5;
-    memmove(par, link_array + deque->back_i * deque->data_size, deque->data_size);
+        return 3;
+    memmove(par, deque->blocks.memory + pointer * deque->data_size * AETHER_BLOCKS_ADD_SIZE + deque->back_i * deque->data_size, deque->data_size);
 
     return 0;
 }
 
 uint8_t get_ae_deque(ae_deque *deque, size_t i, void *par)
 {
-    if (deque == NULL)
-        return 1;
-    if (deque->pointers.memory == NULL)
-        return 2;
-    if (par == NULL)
-        return 3;
-    if (i < 0 || i > (((deque->back_block - deque->front_block) - 1) * AETHER_LINK_ARRAY_ADD_SIZE) + (deque->back_i + (AETHER_LINK_ARRAY_ADD_SIZE - deque->front_i)))
+    if (i < 0 || i > (((deque->back_block - deque->front_block) - 1) * AETHER_BLOCKS_ADD_SIZE) + (deque->back_i + (AETHER_BLOCKS_ADD_SIZE - deque->front_i)))
         return 4;
 
-    size_t link_i = (i + deque->front_i) / AETHER_LINK_ARRAY_ADD_SIZE;
-    i = (i + deque->front_i) - AETHER_LINK_ARRAY_ADD_SIZE * link_i;
+    size_t link_i = (i + deque->front_i) / AETHER_BLOCKS_ADD_SIZE;
+    i = (i + deque->front_i) - AETHER_BLOCKS_ADD_SIZE * link_i;
     link_i += deque->front_block;
 
-    void *link_array;
-    if (get_ae_base(&deque->pointers, &void_p_size, link_i, &link_array) != 0)
+    size_t pointer;
+    if (get_ae_base(&deque->pointers, &pointer_size, link_i, &pointer) != 0)
         return 5;
 
-    memmove(par, link_array + i * deque->data_size, deque->data_size);
+    memmove(par, deque->blocks.memory + pointer * deque->data_size * AETHER_BLOCKS_ADD_SIZE + i * deque->data_size, deque->data_size);
     return 0;
 }
 
 uint8_t set_ae_deque(ae_deque *deque, size_t i, void *par)
 {
-    if (deque == NULL)
+    if (i < 0 || i > (((deque->back_block - deque->front_block) - 1) * AETHER_BLOCKS_ADD_SIZE) + (deque->back_i + (AETHER_BLOCKS_ADD_SIZE - deque->front_i)))
         return 1;
-    if (deque->pointers.memory == NULL)
-        return 2;
-    if (par == NULL)
-        return 3;
-    if (i < 0 || i > (((deque->back_block - deque->front_block) - 1) * AETHER_LINK_ARRAY_ADD_SIZE) + (deque->back_i + (AETHER_LINK_ARRAY_ADD_SIZE - deque->front_i)))
-        return 4;
 
-    size_t link_i = (i + deque->front_i) / AETHER_LINK_ARRAY_ADD_SIZE;
-    i = (i + deque->front_i) - AETHER_LINK_ARRAY_ADD_SIZE * link_i;
+    size_t link_i = (i + deque->front_i) / AETHER_BLOCKS_ADD_SIZE;
+    i = (i + deque->front_i) - AETHER_BLOCKS_ADD_SIZE * link_i;
     link_i += deque->front_block;
 
-    void *link_array;
-    if (get_ae_base(&deque->pointers, &void_p_size, link_i, &link_array) != 0)
+    size_t pointer;
+    if (get_ae_base(&deque->pointers, &pointer_size, link_i, &pointer) != 0)
         return 5;
 
-    memmove(link_array + i * deque->data_size, par, deque->data_size);
+    memmove(deque->blocks.memory + pointer * deque->data_size * AETHER_BLOCKS_ADD_SIZE + i * deque->data_size, par, deque->data_size);
     return 0;
 }
 
 uint8_t insert_ae_deque(ae_deque *deque, size_t i, void *par)
 {
-    if (deque == NULL)
-        return 1;
-    if (deque->pointers.memory == NULL)
-        return 2;
-    if (par == NULL)
-        return 3;
-    size_t quant = (((deque->back_block - deque->front_block) - 1) * AETHER_LINK_ARRAY_ADD_SIZE) + (deque->back_i + 1 + (AETHER_LINK_ARRAY_ADD_SIZE - deque->front_i));
+    size_t quant = (((deque->back_block - deque->front_block) - 1) * AETHER_BLOCKS_ADD_SIZE) + (deque->back_i + 1 + (AETHER_BLOCKS_ADD_SIZE - deque->front_i));
     if (i < 0 || i > quant)
-        return 4;
+        return 1;
 
     if (i == 0)
     {
         if (push_front_ae_deque(deque, par) != 0)
-            return 5;
+            return 2;
         return 0;
     }
-    else if (i == quant - 1)
+    else if (i == quant)
     {
         if (push_back_ae_deque(deque, par) != 0)
-            return 5;
+            return 3;
         return 0;
     }
 
-    size_t link_f_i = (i + deque->front_i) / AETHER_LINK_ARRAY_ADD_SIZE;
-    size_t k = (i + deque->front_i) - AETHER_LINK_ARRAY_ADD_SIZE * link_f_i;
+    if (deque->back_i == AETHER_BLOCKS_ADD_SIZE - 1)
+    {
+        if (deque->back_block == deque->pointers.quant - 1)
+        {
+            if (resize_ae_deque(deque) != 0)
+                return 1;
+        }
+        deque->back_block++;
+    }
+    deque->back_i = (deque->back_i + 1) % AETHER_BLOCKS_ADD_SIZE;
+
+    size_t link_f_i = (i + deque->front_i) / AETHER_BLOCKS_ADD_SIZE;
+    size_t k = (i + deque->front_i) - AETHER_BLOCKS_ADD_SIZE * link_f_i;
     link_f_i += deque->front_block;
-
-    if (link_f_i - deque->front_block >= deque->back_block - link_f_i)
+    size_t pointer1;
+    size_t pointer2;
+    for (size_t i = deque->back_block; i > link_f_i; i--)
     {
-        size_t j = deque->back_block;
-        void *link_array_1;
-        void *link_array_2;
-        void *p = malloc(deque->data_size);
-
-        if (p == NULL)
-            return 6;
-        if (get_ae_base(&deque->pointers, &void_p_size, deque->back_block, &link_array_1) != 0)
-            return 7;
-        if (back_ae_deque(deque, p) != 0)
-            return 8;
-        memmove(link_array_1 + deque->data_size, link_array_1, deque->back_i * deque->data_size);
-        for (; j > link_f_i; j--)
-        {
-            if (get_ae_base(&deque->pointers, &void_p_size, j - 1, &link_array_2) != 0)
-                return 9;
-
-            memmove(link_array_1, link_array_2 + (AETHER_LINK_ARRAY_ADD_SIZE - 1) * deque->data_size, deque->data_size);
-            if (j - 1 == link_f_i)
-                memmove(link_array_2 + (k + 1) * deque->data_size, link_array_2 + k * deque->data_size, (AETHER_LINK_ARRAY_ADD_SIZE - k - 1) * deque->data_size);
-            else
-                memmove(link_array_2 + deque->data_size, link_array_2, (AETHER_LINK_ARRAY_ADD_SIZE - 1) * deque->data_size);
-
-            link_array_1 = link_array_2;
-        }
-
-        memmove(link_array_1 + k * deque->data_size, par, deque->data_size);
-        if (push_back_ae_deque(deque, p) != 0)
-            return 10;
-        free(p);
+        get_ae_base(&deque->pointers, &pointer_size, i, &pointer1);
+        get_ae_base(&deque->pointers, &pointer_size, i - 1, &pointer2);
+        memmove(deque->blocks.memory + (pointer1 * AETHER_BLOCKS_ADD_SIZE + 1) * deque->data_size, deque->blocks.memory + (pointer1 * AETHER_BLOCKS_ADD_SIZE) * deque->data_size, (AETHER_BLOCKS_ADD_SIZE - 1) * deque->data_size);
+        memmove(deque->blocks.memory + (pointer1 * AETHER_BLOCKS_ADD_SIZE) * deque->data_size, deque->blocks.memory + (pointer2 * AETHER_BLOCKS_ADD_SIZE + (AETHER_BLOCKS_ADD_SIZE - 1)) * deque->data_size, deque->data_size);
     }
-    else
-    {
-        link_f_i = (i - 1 + deque->front_i) / AETHER_LINK_ARRAY_ADD_SIZE;
-        k = (i - 1 + deque->front_i) - AETHER_LINK_ARRAY_ADD_SIZE * link_f_i;
-        link_f_i += deque->front_block;
+    get_ae_base(&deque->pointers, &pointer_size, link_f_i, &pointer2);
+    memmove(deque->blocks.memory + (pointer2 * AETHER_BLOCKS_ADD_SIZE + k + 1) * deque->data_size, deque->blocks.memory + (pointer2 * AETHER_BLOCKS_ADD_SIZE + k) * deque->data_size, (AETHER_BLOCKS_ADD_SIZE - k - 1) * deque->data_size);
+    memmove(deque->blocks.memory + (pointer2 * AETHER_BLOCKS_ADD_SIZE + k) * deque->data_size, par, deque->data_size);
 
-        size_t j = deque->front_block;
-        void *link_array_1;
-        void *link_array_2;
-        void *p = malloc(deque->data_size);
-
-        if (p == NULL)
-            return 6;
-        if (get_ae_base(&deque->pointers, &void_p_size, deque->front_block, &link_array_1) != 0)
-            return 7;
-        if (front_ae_deque(deque, p) != 0)
-            return 8;
-        if (link_f_i != j)
-            memmove(link_array_1 + deque->front_i * deque->data_size, link_array_1 + (deque->front_i + 1) * deque->data_size, (AETHER_LINK_ARRAY_ADD_SIZE - deque->front_i - 1) * deque->data_size);
-        else
-            memmove(link_array_1 + deque->front_i * deque->data_size, link_array_1 + (deque->front_i + 1) * deque->data_size, (AETHER_LINK_ARRAY_ADD_SIZE - k - 1) * deque->data_size);
-        for (; j < link_f_i; j++)
-        {
-            if (get_ae_base(&deque->pointers, &void_p_size, j + 1, &link_array_2) != 0)
-                return 9;
-
-            memmove(link_array_1 + (AETHER_LINK_ARRAY_ADD_SIZE - 1) * deque->data_size, link_array_2, deque->data_size);
-            if (j + 1 == link_f_i)
-                memmove(link_array_2, link_array_2 + deque->data_size, k * deque->data_size);
-            else
-                memmove(link_array_2, link_array_2 + deque->data_size, (AETHER_LINK_ARRAY_ADD_SIZE - 1) * deque->data_size);
-
-            link_array_1 = link_array_2;
-        }
-
-        memmove(link_array_1 + k * deque->data_size, par, deque->data_size);
-        if (push_front_ae_deque(deque, p) != 0)
-            return 10;
-        free(p);
-    }
     return 0;
 }
 
 uint8_t delete_ae_deque(ae_deque *deque, size_t i, void *par)
 {
-    if (deque == NULL)
-        return 1;
-    if (deque->pointers.memory == NULL)
-        return 2;
-    if (par == NULL)
-        return 3;
-    size_t quant = (((deque->back_block - deque->front_block) - 1) * AETHER_LINK_ARRAY_ADD_SIZE) + (deque->back_i + 1 + (AETHER_LINK_ARRAY_ADD_SIZE - deque->front_i));
+    size_t quant = (((deque->back_block - deque->front_block) - 1) * AETHER_BLOCKS_ADD_SIZE) + (deque->back_i + 1 + (AETHER_BLOCKS_ADD_SIZE - deque->front_i));
     if (i < 0 || i > quant)
-        return 4;
+        return 1;
 
     if (i == 0)
     {
         if (pop_front_ae_deque(deque, par) != 0)
-            return 5;
+            return 2;
         return 0;
     }
     else if (i == quant - 1)
     {
         if (pop_back_ae_deque(deque, par) != 0)
-            return 5;
+            return 3;
         return 0;
     }
 
-    size_t link_f_i = (i + deque->front_i) / AETHER_LINK_ARRAY_ADD_SIZE;
-    size_t k = (i + deque->front_i) - AETHER_LINK_ARRAY_ADD_SIZE * link_f_i;
+    size_t link_f_i = (i + deque->front_i) / AETHER_BLOCKS_ADD_SIZE;
+    size_t k = (i + deque->front_i) - AETHER_BLOCKS_ADD_SIZE * link_f_i;
     link_f_i += deque->front_block;
-
-    if (par != NULL)
+    size_t pointer1;
+    size_t pointer2;
+    for (size_t i = deque->back_block; i > link_f_i; i--)
     {
-        void *link_array;
-        if (get_ae_base(&deque->pointers, &void_p_size, link_f_i, &link_array) != 0)
-            return 6;
-
-        memmove(par, link_array + k * deque->data_size, deque->data_size);
+        get_ae_base(&deque->pointers, &pointer_size, i, &pointer1);
+        get_ae_base(&deque->pointers, &pointer_size, i - 1, &pointer2);
+        memmove(deque->blocks.memory + (pointer2 * AETHER_BLOCKS_ADD_SIZE + (AETHER_BLOCKS_ADD_SIZE - 1)) * deque->data_size, deque->blocks.memory + (pointer1 * AETHER_BLOCKS_ADD_SIZE) * deque->data_size, deque->data_size);
+        memmove(deque->blocks.memory + (pointer1 * AETHER_BLOCKS_ADD_SIZE) * deque->data_size, deque->blocks.memory + (pointer1 * AETHER_BLOCKS_ADD_SIZE + 1) * deque->data_size, (AETHER_BLOCKS_ADD_SIZE - 1) * deque->data_size);
     }
+    get_ae_base(&deque->pointers, &pointer_size, link_f_i, &pointer2);
+    if (par != NULL)
+        memmove(par, deque->blocks.memory + (pointer2 * AETHER_BLOCKS_ADD_SIZE + k) * deque->data_size, deque->data_size);
+    memmove(deque->blocks.memory + (pointer2 * AETHER_BLOCKS_ADD_SIZE + k) * deque->data_size, deque->blocks.memory + (pointer2 * AETHER_BLOCKS_ADD_SIZE + k + 1) * deque->data_size, (AETHER_BLOCKS_ADD_SIZE - k - 1) * deque->data_size);
 
-    if (link_f_i - deque->front_block >= deque->back_block - link_f_i)
+    if (deque->front_block == deque->back_block)
     {
-        size_t j = link_f_i;
-        void *link_array_1;
-        void *link_array_2;
-        if (get_ae_base(&deque->pointers, &void_p_size, j, &link_array_1) != 0)
-            return 7;
-        memmove(link_array_1 + k * deque->data_size, link_array_1 + (k + 1) * deque->data_size, (AETHER_LINK_ARRAY_ADD_SIZE - 1 - k) * deque->data_size);
-        for (; j < deque->back_block; j++)
+        if (deque->front_i > deque->back_i - 1)
         {
-            if (get_ae_base(&deque->pointers, &void_p_size, j + 1, &link_array_2) != 0)
-                return 8;
-            memmove(link_array_1 + (AETHER_LINK_ARRAY_ADD_SIZE - 1) * deque->data_size, link_array_2, deque->data_size);
-            memmove(link_array_2, link_array_2 + deque->data_size, (AETHER_LINK_ARRAY_ADD_SIZE - 1) * deque->data_size);
-            link_array_1 = link_array_2;
+            deque->front_i = -1;
+            deque->back_i = -1;
         }
-        if (pop_back_ae_deque(deque, NULL) != 0)
-            return 9;
+        else
+        {
+            deque->back_i--;
+        }
     }
     else
     {
-        size_t j = link_f_i;
-        void *link_array_1;
-        void *link_array_2;
-        if (get_ae_base(&deque->pointers, &void_p_size, j, &link_array_1) != 0)
-            return 7;
-        memmove(link_array_1 + deque->data_size, link_array_1, k * deque->data_size);
-        for (; j > deque->front_block; j--)
+        if (deque->back_i == 0)
         {
-            if (get_ae_base(&deque->pointers, &void_p_size, j - 1, &link_array_2) != 0)
-                return 8;
-            memmove(link_array_1, link_array_2 + (AETHER_LINK_ARRAY_ADD_SIZE - 1) * deque->data_size, deque->data_size);
-            memmove(link_array_2 + deque->data_size, link_array_2, (AETHER_LINK_ARRAY_ADD_SIZE - 1) * deque->data_size);
-            link_array_1 = link_array_2;
+            deque->back_block--;
+            minimize_ae_deque(deque);
         }
-        if (pop_front_ae_deque(deque, NULL) != 0)
-            return 9;
+        deque->back_i = deque->back_i == 0 ? AETHER_BLOCKS_ADD_SIZE - 1 : deque->back_i - 1;
     }
-    return 0;
-}
-
-uint8_t free_ae_deque(ae_deque *deque)
-{
-    if (deque == NULL)
-        return 0;
-    if (deque->pointers.memory == NULL)
-        return 0;
-    size_t i;
-    for (i = 0; i < deque->pointers.quant; i++)
-    {
-        void *link_array;
-        if (get_ae_base(&deque->pointers, &void_p_size, i, &link_array) != 0)
-            return 1;
-#ifdef DEBUG_AE
-        printf("Freed memory at address %p\n", link_array);
-#endif
-        free(link_array);
-    }
-    free_ae_base(&deque->pointers);
 
     return 0;
 }

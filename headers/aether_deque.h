@@ -6,6 +6,7 @@
 typedef struct
 {
     ae_base pointers;
+    ae_base blocks;
     int front_i;
     int back_i;
     size_t front_block;
@@ -25,13 +26,11 @@ uint8_t pop_front_ae_deque(ae_deque *deque, void *par);
 
 uint8_t pop_back_ae_deque(ae_deque *deque, void *par);
 
-uint8_t create_front_array_link_ae_deque(ae_deque *deque);
+uint8_t reorganize_ae_deque(ae_deque *deque);
 
-uint8_t create_back_array_link_ae_deque(ae_deque *deque);
+uint8_t resize_ae_deque(ae_deque *deque);
 
-uint8_t delete_front_array_link_ae_deque(ae_deque *deque);
-
-uint8_t delete_back_array_link_ae_deque(ae_deque *deque);
+uint8_t minimize_ae_deque(ae_deque *deque);
 
 uint8_t front_ae_deque(ae_deque *deque, void *par);
 
