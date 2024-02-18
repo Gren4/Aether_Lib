@@ -121,15 +121,37 @@ uint8_t resize_ae_deque(ae_deque *deque)
 
 uint8_t minimize_ae_deque(ae_deque *deque)
 {
-    reorganize_ae_deque(deque);
-
-/*
-    if (deque->blocks.max_quant / (deque->back_block - deque->front_block + 1) >= 8)
+    if (deque->pointers.max_quant / (deque->back_block - deque->front_block + 1) >= 8)
     {
+        size_t num_blocks = deque->back_block - deque->front_block + 1;
+
+        size_t center = deque->pointers.max_quant / 2 - num_blocks / 2;
+        if (deque->front_block != center)
+        {
+            size_t from;
+            size_t to;
+
+            for (size_t i = 0; i < num_blocks; i++)
+            {
+                get_ae_base(&deque->pointers, &pointer_size, i + deque->front_block, &from);
+                get_ae_base(&deque->pointers, &pointer_size, i + center, &to);
+                set_base_ae_base(&deque->blocks, &deque->blocks, &deque->data_size, to * deque->data_size, from * deque->data_size, AETHER_BLOCKS_ADD_SIZE);
+            }
+            deque->front_block = center;
+            deque->back_block = deque->front_block + num_blocks - 1;
+        }
+
+        memmove(deque->pointers.memory, deque->pointers.memory + (deque->pointers.max_quant / 4) * pointer_size, (deque->pointers.max_quant / 2) * pointer_size);
+        deque->front_block -= deque->pointers.max_quant / 4;
+        deque->back_block -= deque->pointers.max_quant / 4;
         resize_ae_base(&deque->pointers, &pointer_size, deque->pointers.max_quant / 2);
         resize_ae_base(&deque->blocks, &deque->data_size, deque->pointers.max_quant * AETHER_BLOCKS_ADD_SIZE);
     }
-*/
+    else
+    {
+        reorganize_ae_deque(deque);
+    }
+
     return 0;
 }
 

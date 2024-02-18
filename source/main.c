@@ -50,7 +50,18 @@ int main(void)
     toc = clock();
     printf("Execution time: %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);
     printf("\n");
-
+    buf = 0;
+    while(!pop_front_ae_deque(&deq,&out))
+    {
+        printf("%llu %llu \n", buf, out);
+        buf++;
+    }
+    buf = 1;
+    for (size_t i = 0; i < 1000; i++)
+    {
+        push_back_ae_deque(&deq, &buf);
+        buf++;
+    }
 
     for (size_t i = 0; i < 450; i++)
     {
