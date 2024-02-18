@@ -51,31 +51,25 @@ int main(void)
     printf("Execution time: %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);
     printf("\n");
     buf = 0;
-    while(!pop_front_ae_deque(&deq,&out))
-    {
-        printf("%llu %llu \n", buf, out);
-        buf++;
-    }
-    buf = 1;
-    for (size_t i = 0; i < 1000; i++)
-    {
-        push_back_ae_deque(&deq, &buf);
-        buf++;
-    }
+    tic = clock();
 
     for (size_t i = 0; i < 450; i++)
     {
-        pop_back_ae_deque(&deq, NULL);
-        pop_front_ae_deque(&deq, NULL);
+        pop_front_ae_deque(&deq, &buf);
+        pop_back_ae_deque(&deq, &buf);
     }
-    buf = 0;
+
     while(!pop_front_ae_deque(&deq,&out))
     {
         printf("%llu %llu \n", buf, out);
         buf++;
     }
-    free_ae_deque(&deq);
+    toc = clock();
+    printf("Execution time: %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);
+    printf("\n");
 
+    free_ae_deque(&deq);
+/*
     ae_vector vec = create_ae_vector(sizeof(size_t), 0);
 
     tic = clock();
@@ -88,6 +82,6 @@ int main(void)
     printf("Execution time: %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);
     printf("\n");
     free_ae_vector(&vec);
-
+*/
     return 0;
 }
