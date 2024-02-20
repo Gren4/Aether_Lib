@@ -1,4 +1,5 @@
 #include "aether_map.h"
+#include <string.h>
 #include <math.h>
 
 typedef enum
@@ -63,17 +64,6 @@ static size_t hash_function(const char *key, size_t len)
   h ^= h >> 15;
 
   return h;
-    /*
-    // djb2
-    size_t hash = 5381;
-
-    for (size_t i = 0; i < len; i++)
-    {
-        hash = ((hash << 5) + hash) + key[i];
-    }
-
-    return hash;
-    */
 }
 
 static uint32_t key_function(const char *key, size_t len)

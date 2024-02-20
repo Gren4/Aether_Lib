@@ -1,13 +1,8 @@
 #ifndef __AETHER_BASE__
 #define __AETHER_BASE__
 
-#include "aether_defines.h"
-
-#include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
 
 typedef enum
 {

@@ -1,5 +1,9 @@
 #include "aether_base.h"
+#include <string.h>
 #include <math.h>
+#include <stdio.h>
+
+#define AETHER_BASE_ADD_SIZE 2
 
 static inline size_t find_next_power_of_2(size_t n)
 {

@@ -1,9 +1,0 @@
-#ifndef __AETHER_DEFINES__
-#define __AETHER_DEFINES__
-
-#define AETHER_BASE_ADD_SIZE 1
-
-#define AETHER_BLOCKS_ADD_SIZE 8
-#define AETHER_DEQUE_ADD_SIZE 2
-
-#endif //__AETHER_DEFINES__

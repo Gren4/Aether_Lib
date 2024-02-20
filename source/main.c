@@ -1,4 +1,7 @@
 #include "aether_lib.h"
+#include "aether_render.h"
+#include "aether_utils.h"
+
 #include <time.h>
 
 void print_vec(ae_vector *vec)
@@ -31,57 +34,26 @@ int comp(const void *a, const void *b)
         return 0;
 }
 
+typedef struct are
+{
+    int a;
+    int b;
+} are;
+
 int main(void)
 {
+    ae_vec3_f vec3 = {.x = 1, .y = 2, .z = 3};
+    double f = AE_VEC3_NORM(vec3);
+    AE_VEC3_NORMALIZE(vec3, double, vec3, 1.0);
 
-    clock_t tic, toc;
+    AE_TGA_C_RGBA(white, 255, 255, 255, 255);
+    AE_TGA_C_RGBA(red, 255, 0, 0, 255);
+    ae_tga_i image = create_ae_tga(100,100,RGBA);
+    line_ae_render(13, 20, 80, 40, &image, &white);
+    line_ae_render(20, 13, 40, 80, &image, &red);
+    line_ae_render(80, 40, 13, 20, &image, &red);
+    flip_vertically_ae_tga(&image);
+    write_file_ae_tga(&image, "output.tga", false);
 
-    size_t buf = 1;
-    size_t out = 0;
-
-    ae_deque deq = create_ae_deque(sizeof(size_t));
-
-    tic = clock();
-    for (size_t i = 0; i < 1000; i++)
-    {
-        push_back_ae_deque(&deq, &buf);
-        buf++;
-    }
-    toc = clock();
-    printf("Execution time: %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);
-    printf("\n");
-    buf = 0;
-    tic = clock();
-
-    for (size_t i = 0; i < 450; i++)
-    {
-        pop_front_ae_deque(&deq, &buf);
-        pop_back_ae_deque(&deq, &buf);
-    }
-
-    while(!pop_front_ae_deque(&deq,&out))
-    {
-        printf("%llu %llu \n", buf, out);
-        buf++;
-    }
-    toc = clock();
-    printf("Execution time: %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);
-    printf("\n");
-
-    free_ae_deque(&deq);
-/*
-    ae_vector vec = create_ae_vector(sizeof(size_t), 0);
-
-    tic = clock();
-    for (size_t i = 0; i < 1000000; i++)
-    {
-        append_ae_vector(&vec, &buf);
-        buf++;
-    }
-    toc = clock();
-    printf("Execution time: %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);
-    printf("\n");
-    free_ae_vector(&vec);
-*/
     return 0;
 }

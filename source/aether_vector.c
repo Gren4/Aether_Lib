@@ -1,4 +1,5 @@
 #include "aether_vector.h"
+#include <string.h>
 
 ae_vector create_ae_vector(size_t data_size, size_t quant)
 {
