@@ -133,6 +133,7 @@ uint8_t free_ae_base(ae_base *const base)
 #endif
     free(base->memory);
     base->quant = 0;
+    base->max_quant = 0;
 
     return 0;
 }

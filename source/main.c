@@ -4,6 +4,9 @@
 
 #include <time.h>
 
+#include <stdio.h>
+#include <string.h>
+
 void print_vec(ae_vector *vec)
 {
     uint8_t buf;
@@ -42,18 +45,19 @@ typedef struct are
 
 int main(void)
 {
+    ae_model model = open_ae_model("african_head.obj");
+
     ae_vec3_f vec3 = {.x = 1, .y = 2, .z = 3};
     double f = AE_VEC3_NORM(vec3);
     AE_VEC3_NORMALIZE(vec3, double, vec3, 1.0);
 
     AE_TGA_C_RGBA(white, 255, 255, 255, 255);
     AE_TGA_C_RGBA(red, 255, 0, 0, 255);
-    ae_tga_i image = create_ae_tga(100,100,RGBA);
-    line_ae_render(13, 20, 80, 40, &image, &white);
-    line_ae_render(20, 13, 40, 80, &image, &red);
-    line_ae_render(80, 40, 13, 20, &image, &red);
+    ae_tga_i image = create_ae_tga(800,800,RGBA);
+    render_model(&model, &image, &white);
     flip_vertically_ae_tga(&image);
     write_file_ae_tga(&image, "output.tga", false);
+    close_ae_model(&model);
 
     return 0;
 }
