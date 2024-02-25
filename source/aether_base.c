@@ -462,3 +462,21 @@ uint8_t swap_ae_base(ae_base *const base, const size_t *const data_size, size_t 
 
     return 0;
 }
+
+uint8_t optimize_ae_base(ae_base *const base, const size_t *const data_size)
+{
+    void *p = realloc(base->memory, base->quant * (*data_size));
+
+    if (p == NULL)
+        return 1;
+
+#ifdef DEBUG_AE
+    printf("Reallocated memory from address %p to %p\n", base->memory, p);
+#endif
+
+    base->memory = p;
+
+    base->max_quant = base->quant;
+
+    return 0;
+}

@@ -4,22 +4,31 @@
 #include <string.h>
 #include <stdbool.h>
 
-ae_model open_ae_model(const char *filename)
+ae_model open_ae_model(const char *m_filename, const char *t_filename)
 {
     ae_model new_model = {
         .verts = create_ae_vector(sizeof(ae_vec3_f), 0),
-        .faces = create_ae_vector(sizeof(ae_vector), 0)
+        .faces = create_ae_vector(sizeof(ae_vector), 0),
+        .uvs = create_ae_vector(sizeof(ae_vec2_f), 0),
+        .texture = {.data = NULL}
     };
     FILE *in;
-    if ((in = fopen(filename, "rb")) == NULL)
+    if ((in = fopen(m_filename, "rb")) == NULL)
     {
         return new_model;
     }
 
-    int type = 0;
+    if (t_filename != NULL)
+    {
+        read_file_ae_tga(&new_model.texture, t_filename);
+    }
+
+    int32_t type = 0;
     char a[2] = {0};
     while((a[0] = fgetc(in)) != EOF)
     {
+        if (a[0] == '\n')
+            continue;
         a[1] = fgetc(in);
         type = a[0] << 8 | a[1];
         switch (type)
@@ -32,17 +41,27 @@ ae_model open_ae_model(const char *filename)
         }
         break;
 
+        case 30324: //vt
+        {
+            ae_vec2_f uv;
+            fscanf(in, "  %lf %lf", &uv.u, &uv.v);
+            append_ae_vector(&new_model.uvs, &uv);
+            while ((a[0] = fgetc(in)) != '\n');
+        }
+        break;
+
         case 26144: //f
         {
-            ae_vector faces = create_ae_vector(sizeof(size_t), 0);
-            size_t v_i = 0;
+            ae_vector faces = create_ae_vector(sizeof(ae_face), 0);
+            ae_face face;
             char num[65];
             char c;
             int i_c = 0;
-            bool read_n = true;
-            while ((c = fgetc(in)) != '\n')
+            int32_t read_n = 0;
+            while (read_n != -1)
             {
-                if (read_n)
+                c = fgetc(in);
+                if (read_n < 2)
                 {
                     if (c != '/')
                     {
@@ -52,30 +71,54 @@ ae_model open_ae_model(const char *filename)
                     else
                     {
                         num[i_c] = '\n';
-                        v_i = atoi(num) - 1;
-                        append_ae_vector(&faces, &v_i);
+                        switch(read_n)
+                        {
+                            case 0:
+                                face.v_i = atoi(num) - 1;
+                            break;
+
+                            case 1:
+                                face.uv_i = atoi(num) - 1;
+                            break;
+
+                            default:
+                            break;
+                        }
+
+
                         i_c = 0;
-                        read_n = false;
+                        read_n += 1;
                     }
                 }
                 else
                 {
                     if (c == ' ')
                     {
-                        read_n = true;
+                        append_ae_vector(&faces, &face);
+                        read_n = 0;
+                    }
+                    else if (c == '\n')
+                    {
+                        append_ae_vector(&faces, &face);
+                        read_n = -1;
                     }
                 }
             }
-
+            optimize_ae_vector(&faces);
             append_ae_vector(&new_model.faces, &faces);
         }
         break;
 
         default:
+            while ((a[0] = fgetc(in)) != '\n');
             break;
         }
 
     }
+    optimize_ae_vector(&new_model.verts);
+    optimize_ae_vector(&new_model.faces);
+    optimize_ae_vector(&new_model.uvs);
+
     return new_model;
 }
 
@@ -115,4 +158,11 @@ ae_vector face_ae_model(ae_model *model, size_t idx)
     ae_vector face;
     get_ae_vector(&model->faces, idx, &face);
     return face;
+}
+
+ae_vec2_f uv_ae_model(ae_model *model, size_t i)
+{
+    ae_vec2_f uv;
+    get_ae_vector(&model->uvs, i, &uv);
+    return uv;
 }

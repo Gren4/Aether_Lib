@@ -189,3 +189,11 @@ uint8_t swap_ae_vector(ae_vector *const vector, size_t i, size_t j)
 
     return 0;
 }
+
+uint8_t optimize_ae_vector(ae_vector *const vector)
+{
+    if (optimize_ae_base(&vector->data, &vector->data_size) != 0)
+        return 1;
+
+    return 0;
+}

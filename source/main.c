@@ -45,18 +45,35 @@ typedef struct are
 
 int main(void)
 {
-    ae_model model = open_ae_model("african_head.obj");
+    clock_t tic, toc;
 
-    ae_vec3_f vec3 = {.x = 1, .y = 2, .z = 3};
-    double f = AE_VEC3_NORM(vec3);
-    AE_VEC3_NORMALIZE(vec3, double, vec3, 1.0);
+    tic = clock();
+    ae_model model = open_ae_model("african_head.obj", "african_head_diffuse2.tga");
+    toc = clock();
+    printf("Execution time: %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);
 
     AE_TGA_C_RGBA(white, 255, 255, 255, 255);
     AE_TGA_C_RGBA(red, 255, 0, 0, 255);
+    tic = clock();
     ae_tga_i image = create_ae_tga(800,800,RGBA);
+    toc = clock();
+    printf("Execution time: %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);
+
+    tic = clock();
     render_model(&model, &image, &white);
+    toc = clock();
+    printf("Execution time: %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);
+
+    tic = clock();
     flip_vertically_ae_tga(&image);
+    toc = clock();
+    printf("Execution time: %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);
+
+    tic = clock();
     write_file_ae_tga(&image, "output.tga", false);
+    toc = clock();
+    printf("Execution time: %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);
+
     close_ae_model(&model);
 
     return 0;

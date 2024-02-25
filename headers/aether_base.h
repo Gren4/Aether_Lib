@@ -71,4 +71,6 @@ uint8_t sort_ae_base(ae_base *const base, const size_t *const data_size, int (*c
 
 uint8_t swap_ae_base(ae_base *const base, const size_t *const data_size, size_t i, size_t j);
 
+uint8_t optimize_ae_base(ae_base *const base, const size_t *const data_size);
+
 #endif // __AETHER_BASE__

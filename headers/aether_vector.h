@@ -51,4 +51,6 @@ uint8_t sort_ae_vector(ae_vector *const vector, int (*comparator)(const void *, 
 
 uint8_t swap_ae_vector(ae_vector *const vector, size_t i, size_t j);
 
+uint8_t optimize_ae_vector(ae_vector *const vector);
+
 #endif // __AETHER_VECTOR__
