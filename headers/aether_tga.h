@@ -5,24 +5,24 @@
 #include <stdio.h>
 #include <stdint.h>
 
-// header
-#pragma pack(push, 1)
-typedef struct ae_tga_h
-{
-	int8_t idlength;
-	int8_t colormaptype;
-	int8_t datatypecode;
-	int16_t colormaporigin;
-	int16_t colormaplength;
-	int8_t colormapdepth;
-	int16_t x_origin;
-	int16_t y_origin;
-	int16_t width;
-	int16_t height;
-	int8_t bitsperpixel;
-	int8_t imagedescriptor;
-} ae_tga_h;
-#pragma pack(pop)
+// // header
+// #pragma pack(push, 1)
+// typedef struct ae_tga_h
+// {
+// 	0 int8_t idlength;
+// 	1 int8_t colormaptype;
+// 	2 int8_t datatypecode;
+// 	3 4 int16_t colormaporigin;
+// 	5 6 int16_t colormaplength;
+// 	7 int8_t colormapdepth;
+// 	8 9 int16_t x_origin;
+// 	10 11 int16_t y_origin;
+// 	12 13 int16_t width;
+// 	14 15 int16_t height;
+// 	16 int8_t bitsperpixel;
+// 	17 int8_t imagedescriptor;
+// } ae_tga_h;
+// #pragma pack(pop)
 
 // color
 typedef struct ae_tga_c

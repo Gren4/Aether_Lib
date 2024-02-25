@@ -55,8 +55,8 @@ uint8_t reorganize_ae_deque(ae_deque *deque)
             size_t num_blocks = deque->back_block - deque->front_block + 1;
 
             size_t center = deque->pointers.max_quant / 2 - num_blocks / 2;
-            size_t from;
-            size_t to;
+            size_t from = 0;
+            size_t to = 0;
 
             for (size_t i = 0; i < num_blocks; i++)
             {
@@ -73,8 +73,8 @@ uint8_t reorganize_ae_deque(ae_deque *deque)
             size_t num_blocks = deque->back_block - deque->front_block + 1;
 
             size_t center = deque->pointers.max_quant / 2 + num_blocks / 2 - 1;
-            size_t from;
-            size_t to;
+            size_t from = 0;
+            size_t to = 0;
             for (size_t i = 0; i < num_blocks; i++)
             {
                 get_ae_base(&deque->pointers, &pointer_size, deque->back_block - i, &from);
@@ -127,8 +127,8 @@ uint8_t minimize_ae_deque(ae_deque *deque)
         if (deque->front_block < deque->pointers.max_quant - deque->back_block - 1)
         {
             center -= num_blocks / 2;
-            size_t from;
-            size_t to;
+            size_t from = 0;
+            size_t to = 0;
             if (deque->front_block != center)
             {
                 for (size_t i = 0; i < num_blocks; i++)
@@ -145,8 +145,8 @@ uint8_t minimize_ae_deque(ae_deque *deque)
         else if (deque->front_block > deque->pointers.max_quant - deque->back_block - 1)
         {
             center += num_blocks / 2 - 1;
-            size_t from;
-            size_t to;
+            size_t from = 0;
+            size_t to = 0;
             if (deque->back_block != center)
             {
                 for (size_t i = 0; i < num_blocks; i++)
@@ -391,8 +391,8 @@ uint8_t insert_ae_deque(ae_deque *deque, size_t i, void *par)
     size_t link_f_i = (i + deque->front_i) / AETHER_BLOCKS_ADD_SIZE;
     size_t k = (i + deque->front_i) - AETHER_BLOCKS_ADD_SIZE * link_f_i;
     link_f_i += deque->front_block;
-    size_t pointer1;
-    size_t pointer2;
+    size_t pointer1 = 0;
+    size_t pointer2 = 0;
     for (size_t i = deque->back_block; i > link_f_i; i--)
     {
         get_ae_base(&deque->pointers, &pointer_size, i, &pointer1);
@@ -429,8 +429,8 @@ uint8_t delete_ae_deque(ae_deque *deque, size_t i, void *par)
     size_t link_f_i = (i + deque->front_i) / AETHER_BLOCKS_ADD_SIZE;
     size_t k = (i + deque->front_i) - AETHER_BLOCKS_ADD_SIZE * link_f_i;
     link_f_i += deque->front_block;
-    size_t pointer1;
-    size_t pointer2;
+    size_t pointer1 = 0;
+    size_t pointer2 = 0;
     for (size_t i = deque->back_block; i > link_f_i; i--)
     {
         get_ae_base(&deque->pointers, &pointer_size, i, &pointer1);

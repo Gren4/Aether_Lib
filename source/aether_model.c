@@ -10,8 +10,7 @@ ae_model open_ae_model(const char *m_filename, const char *t_filename)
         .verts = create_ae_vector(sizeof(ae_vec3_f), 0),
         .faces = create_ae_vector(sizeof(ae_vector), 0),
         .uvs = create_ae_vector(sizeof(ae_vec2_f), 0),
-        .texture = {.data = NULL}
-    };
+        .texture = {.data = NULL}};
     FILE *in;
     if ((in = fopen(m_filename, "rb")) == NULL)
     {
@@ -25,7 +24,7 @@ ae_model open_ae_model(const char *m_filename, const char *t_filename)
 
     int32_t type = 0;
     char a[2] = {0};
-    while((a[0] = fgetc(in)) != EOF)
+    while ((a[0] = fgetc(in)) != EOF)
     {
         if (a[0] == '\n')
             continue;
@@ -33,7 +32,7 @@ ae_model open_ae_model(const char *m_filename, const char *t_filename)
         type = a[0] << 8 | a[1];
         switch (type)
         {
-        case 30240: //v
+        case 30240: // v
         {
             ae_vec3_f v;
             fscanf(in, "%lf %lf %lf\n", &v.x, &v.y, &v.z);
@@ -41,16 +40,17 @@ ae_model open_ae_model(const char *m_filename, const char *t_filename)
         }
         break;
 
-        case 30324: //vt
+        case 30324: // vt
         {
             ae_vec2_f uv;
             fscanf(in, "  %lf %lf", &uv.u, &uv.v);
             append_ae_vector(&new_model.uvs, &uv);
-            while ((a[0] = fgetc(in)) != '\n');
+            while ((a[0] = fgetc(in)) != '\n')
+                ;
         }
         break;
 
-        case 26144: //f
+        case 26144: // f
         {
             ae_vector faces = create_ae_vector(sizeof(ae_face), 0);
             ae_face face;
@@ -71,20 +71,19 @@ ae_model open_ae_model(const char *m_filename, const char *t_filename)
                     else
                     {
                         num[i_c] = '\n';
-                        switch(read_n)
+                        switch (read_n)
                         {
-                            case 0:
-                                face.v_i = atoi(num) - 1;
+                        case 0:
+                            face.v_i = atoi(num) - 1;
                             break;
 
-                            case 1:
-                                face.uv_i = atoi(num) - 1;
+                        case 1:
+                            face.uv_i = atoi(num) - 1;
                             break;
 
-                            default:
+                        default:
                             break;
                         }
-
 
                         i_c = 0;
                         read_n += 1;
@@ -110,10 +109,10 @@ ae_model open_ae_model(const char *m_filename, const char *t_filename)
         break;
 
         default:
-            while ((a[0] = fgetc(in)) != '\n');
+            while ((a[0] = fgetc(in)) != '\n')
+                ;
             break;
         }
-
     }
     optimize_ae_vector(&new_model.verts);
     optimize_ae_vector(&new_model.faces);
@@ -146,23 +145,20 @@ size_t n_faces_ae_model(ae_model *model)
     return model->faces.data.quant;
 }
 
-ae_vec3_f vert_ae_model(ae_model *model, size_t i)
+void vert_ae_model(ae_model *model, size_t i, ae_vec3_f *vert)
 {
-    ae_vec3_f vert;
-    get_ae_vector(&model->verts, i, &vert);
-    return vert;
+    get_ae_vector(&model->verts, i, vert);
+    return;
 }
 
-ae_vector face_ae_model(ae_model *model, size_t idx)
+void face_ae_model(ae_model *model, size_t idx, ae_vector *face)
 {
-    ae_vector face;
-    get_ae_vector(&model->faces, idx, &face);
-    return face;
+    get_ae_vector(&model->faces, idx, face);
+    return;
 }
 
-ae_vec2_f uv_ae_model(ae_model *model, size_t i)
+void uv_ae_model(ae_model *model, size_t i, ae_vec2_f *uv)
 {
-    ae_vec2_f uv;
-    get_ae_vector(&model->uvs, i, &uv);
-    return uv;
+    get_ae_vector(&model->uvs, i, uv);
+    return;
 }

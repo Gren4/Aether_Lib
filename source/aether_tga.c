@@ -63,16 +63,16 @@ bool read_file_ae_tga(ae_tga_i *image, const char *filename)
         return false;
     }
 
-    ae_tga_h header;
-    if (fgets((char *)&header, sizeof(header), in) == NULL)
+    char header[18];
+    if (fread(header, 1, sizeof(header), in) != sizeof(header))
     {
         fclose(in);
         return false;
     }
 
-    image->width = header.width;
-    image->height = header.height;
-    image->bytespp = header.bitsperpixel >> 3;
+    image->width = header[13] << 8 | header[12];
+    image->height = header[15] << 8 | header[14];
+    image->bytespp = header[16] >> 3;
 
     if (image->width <= 0 || image->height <= 0 || (image->bytespp != GRAYSCALE && image->bytespp != RGB && image->bytespp != RGBA))
     {
@@ -83,11 +83,11 @@ bool read_file_ae_tga(ae_tga_i *image, const char *filename)
     size_t nbytes = image->bytespp * image->width * image->height;
     image->data = malloc(sizeof(uint8_t) * nbytes);
 
-    switch (header.datatypecode)
+    switch (header[2])
     {
     case 3:
     case 2:
-        if (fgets((char *)image->data, nbytes, in) == NULL)
+        if (fread((char *)image->data, 1, nbytes, in) != nbytes)
         {
             fclose(in);
             return false;
@@ -108,12 +108,12 @@ bool read_file_ae_tga(ae_tga_i *image, const char *filename)
         break;
     }
 
-    if (!(header.imagedescriptor & 0x20))
+    if (!(header[17] & 0x20))
     {
         flip_vertically_ae_tga(image);
     }
 
-    if (!(header.imagedescriptor & 0x10))
+    if (!(header[17] & 0x10))
     {
         flip_horizontally_ae_tga(image);
     }
@@ -143,7 +143,7 @@ bool load_rle_data_ae_tga(ae_tga_i *image, FILE *in)
             chunkheader++;
             for (size_t i = 0; i < chunkheader; i++)
             {
-                if (fgets((char *)colorbuffer.raw, image->bytespp, in) == NULL)
+                if (fread((char *)colorbuffer.raw, 1, image->bytespp, in) != image->bytespp)
                 {
                     return false;
                 }
@@ -161,7 +161,7 @@ bool load_rle_data_ae_tga(ae_tga_i *image, FILE *in)
         else
         {
             chunkheader -= 127;
-            if (fgets((char *)colorbuffer.raw, image->bytespp, in) == NULL)
+            if (fread((char *)colorbuffer.raw, 1, image->bytespp, in) != image->bytespp)
             {
                 return false;
             }
@@ -196,21 +196,22 @@ bool write_file_ae_tga(ae_tga_i *image, const char *filename, bool rle)
         return false;
     }
 
-    ae_tga_h header;
-    memset((void *)&header, 0, sizeof(header));
-    header.bitsperpixel = image->bytespp << 3;
-    header.width = image->width;
-    header.height = image->height;
-    header.datatypecode = (image->bytespp == GRAYSCALE ? (rle ? 11 : 3) : (rle ? 10 : 2));
-    header.imagedescriptor = 0x20;
-    if (fwrite((int8_t *)&header, 1, sizeof(header), out) != sizeof(header))
+    char header[18] = {0};
+    header[16] = image->bytespp << 3;
+    header[12] = image->width & 0xff;
+    header[13] = image->width >> 8;
+    header[14] = image->height & 0xff;
+    header[15] = image->height >> 8;
+    header[2] = (image->bytespp == GRAYSCALE ? (rle ? 11 : 3) : (rle ? 10 : 2));
+    header[17] = 0x20;
+    if (fwrite(header, 1, sizeof(header), out) != sizeof(header))
     {
         fclose(out);
         return false;
     }
     if (!rle)
     {
-        if (fwrite((int8_t *)image->data, 1, image->width * image->height * image->bytespp, out) != image->width * image->height * image->bytespp)
+        if (fwrite((char *)image->data, 1, image->width * image->height * image->bytespp, out) != image->width * image->height * image->bytespp)
         {
             fclose(out);
             return false;
@@ -225,17 +226,17 @@ bool write_file_ae_tga(ae_tga_i *image, const char *filename, bool rle)
         }
     }
 
-    if (fwrite((int8_t *)developer_area_ref, 1, sizeof(developer_area_ref), out) != sizeof(developer_area_ref))
+    if (fwrite((char *)developer_area_ref, 1, sizeof(developer_area_ref), out) != sizeof(developer_area_ref))
     {
         fclose(out);
         return false;
     }
-    if (fwrite((int8_t *)extension_area_ref, 1, sizeof(extension_area_ref), out) != sizeof(extension_area_ref))
+    if (fwrite((char *)extension_area_ref, 1, sizeof(extension_area_ref), out) != sizeof(extension_area_ref))
     {
         fclose(out);
         return false;
     }
-    if (fwrite((int8_t *)footer, 1, sizeof(footer), out) != sizeof(footer))
+    if (fwrite((char *)footer, 1, sizeof(footer), out) != sizeof(footer))
     {
         fclose(out);
         return false;
@@ -251,11 +252,14 @@ bool unload_rle_data_ae_tga(ae_tga_i *image, FILE *out)
     const uint8_t max_chunk_length = 128;
     size_t npixels = image->width * image->height;
     size_t curpix = 0;
+    size_t chunkstart;
+    size_t curbyte;
+    uint8_t run_length;
     while (curpix < npixels)
     {
-        size_t chunkstart = curpix * image->bytespp;
-        size_t curbyte = chunkstart;
-        uint8_t run_length = 1;
+        chunkstart = curpix * image->bytespp;
+        curbyte = chunkstart;
+        run_length = 1;
         bool raw = true;
         while (curpix + run_length < npixels && run_length < max_chunk_length)
         {
@@ -285,7 +289,7 @@ bool unload_rle_data_ae_tga(ae_tga_i *image, FILE *out)
         {
             return false;
         }
-        if (fwrite((int8_t *)(image->data + chunkstart), 1, (raw ? run_length * image->bytespp : image->bytespp), out) != (raw ? run_length * image->bytespp : image->bytespp))
+        if (fwrite((char *)(image->data + chunkstart), 1, (raw ? run_length * image->bytespp : image->bytespp), out) != (raw ? run_length * image->bytespp : image->bytespp))
         {
             return false;
         }
@@ -326,12 +330,14 @@ bool flip_horizontally_ae_tga(ae_tga_i *image)
     if (image->data == NULL)
         return false;
     size_t half = image->width >> 1;
+    ae_tga_c c1;
+    ae_tga_c c2;
     for (size_t i = 0; i < half; i++)
     {
         for (size_t j = 0; j < image->height; j++)
         {
-            ae_tga_c c1 = get_ae_tga(image, i, j);
-            ae_tga_c c2 = get_ae_tga(image, image->width - 1 - i, j);
+            c1 = get_ae_tga(image, i, j);
+            c2 = get_ae_tga(image, image->width - 1 - i, j);
             set_ae_tga(image, i, j, &c2);
             set_ae_tga(image, image->width - 1 - i, j, &c1);
         }
@@ -346,10 +352,12 @@ bool flip_vertically_ae_tga(ae_tga_i *image)
     size_t bytes_per_line = image->width * image->bytespp;
     uint8_t *line = malloc(bytes_per_line);
     size_t half = image->height >> 1;
+    size_t l1;
+    size_t l2;
     for (size_t j = 0; j < half; j++)
     {
-        size_t l1 = j * bytes_per_line;
-        size_t l2 = (image->height - 1 - j) * bytes_per_line;
+        l1 = j * bytes_per_line;
+        l2 = (image->height - 1 - j) * bytes_per_line;
         memmove((void *)line, (void *)(image->data + l1), bytes_per_line);
         memmove((void *)(image->data + l1), (void *)(image->data + l2), bytes_per_line);
         memmove((void *)(image->data + l2), (void *)line, bytes_per_line);
@@ -375,11 +383,14 @@ bool scale_ae_tga(ae_tga_i *image, int32_t w, int32_t h)
     size_t erry = 0;
     size_t nlinebytes = w * image->bytespp;
     size_t olinebytes = image->width * image->bytespp;
+    size_t errx;
+    size_t nx;
+    size_t ox;
     for (size_t j = 0; j < image->height; j++)
     {
-        size_t errx = image->width - w;
-        size_t nx = -image->bytespp;
-        size_t ox = nx;
+        errx = image->width - w;
+        nx = -image->bytespp;
+        ox = nx;
         for (size_t i = 0; i < image->width; i++)
         {
             ox += image->bytespp;

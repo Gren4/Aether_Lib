@@ -23,9 +23,9 @@ ae_model open_ae_model(const char *m_filename, const char *t_filename);
 void close_ae_model(ae_model *model);
 size_t n_verts_ae_model(ae_model *model);
 size_t n_faces_ae_model(ae_model *model);
-ae_vec3_f vert_ae_model(ae_model *model, size_t i);
-ae_vector face_ae_model(ae_model *model, size_t idx);
-ae_vec2_f uv_ae_model(ae_model *model, size_t i);
+void vert_ae_model(ae_model *model, size_t i, ae_vec3_f *vert);
+void face_ae_model(ae_model *model, size_t idx, ae_vector *face);
+void uv_ae_model(ae_model *model, size_t i, ae_vec2_f *uv);
 
 
 #endif // __AETHER_MODEL__
