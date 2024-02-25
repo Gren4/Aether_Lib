@@ -37,17 +37,19 @@ int comp(const void *a, const void *b)
         return 0;
 }
 
-typedef struct are
-{
-    int a;
-    int b;
-} are;
-
 int main(void)
 {
+    AE_MATRIX_F_CREATE(m, 2, 2);
+    AE_MATRIX_F_GET(m, 0, 0) = 2;
+    AE_MATRIX_F_GET(m, 0, 1) = -5;
+    AE_MATRIX_F_GET(m, 1, 0) = 1;
+    AE_MATRIX_F_GET(m, 1, 1) = -3;
+
+    AE_MATRIX_F_INVERSE(m_inv, m);
+
     clock_t tic, toc;
 
-        size_t buf = 1;
+    size_t buf = 1;
     size_t out = 0;
 
     ae_deque deq = create_ae_deque(sizeof(size_t));
@@ -104,7 +106,7 @@ int main(void)
     AE_TGA_C_RGBA(white, 255, 255, 255, 255);
     AE_TGA_C_RGBA(red, 255, 0, 0, 255);
     tic = clock();
-    ae_tga_i image = create_ae_tga(4096,4096,RGBA);
+    ae_tga_i image = create_ae_tga(800,800,RGBA);
     toc = clock();
     printf("TGA create execution time: %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);
 

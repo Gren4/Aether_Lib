@@ -21,8 +21,8 @@ ae_tga_i create_ae_tga(int32_t w, int32_t h, int32_t bpp)
         .width = w,
         .height = h,
         .bytespp = bpp};
-
-    memset(new_image.data, 0, nbytes);
+    if (new_image.data != NULL)
+        memset(new_image.data, 0, nbytes);
 
     return new_image;
 }
