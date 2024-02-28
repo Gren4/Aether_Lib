@@ -1,3 +1,4 @@
+// based on https://github.com/ssloy/tinyrenderer/wiki
 #ifndef __AETHER_TGA_H__
 #define __AETHER_TGA_H__
 

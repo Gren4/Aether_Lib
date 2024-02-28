@@ -1,3 +1,4 @@
+// based on https://github.com/ssloy/tinyrenderer/wiki
 #ifndef __AETHER_GEOMETRY__
 #define __AETHER_GEOMETRY__
 
@@ -95,12 +96,20 @@ typedef AE_VEC3_TEMPLATE(int32_t, ae_vec3_i);
 #define AE_MATRIX_F_CREATE(name, r, c) \
     struct                             \
     {                                  \
-        double data[r * c];            \
+        double *data;                  \
         size_t rows;                   \
         size_t cols;                   \
     } name;                            \
     name.rows = (r);                   \
-    name.cols = (c);
+    name.cols = (c);                   \
+    name.data = calloc(name.cols * name.rows, sizeof(double));
+
+#define AE_MATRIX_F_FREE(m) \
+    if (m.data != NULL)     \
+    {                       \
+        free(m.data);       \
+        m.data = NULL;      \
+    }
 
 #define AE_MATRIX_F_GET(m, r, c) (m.data[(c) + m.cols * (r)])
 
@@ -146,7 +155,6 @@ typedef AE_VEC3_TEMPLATE(int32_t, ae_vec3_i);
     if (m.rows == m.cols)                                                                              \
     {                                                                                                  \
         AE_MATRIX_F_CREATE(temp, m.rows, m.cols * 2);                                                  \
-        memset(temp.data, 0, sizeof(temp.data));                                                       \
         for (size_t i = 0; i < m.rows; i++)                                                            \
         {                                                                                              \
             for (size_t j = 0; j < m.cols; j++)                                                        \
@@ -193,6 +201,7 @@ typedef AE_VEC3_TEMPLATE(int32_t, ae_vec3_i);
                 AE_MATRIX_F_GET(result, i, j) = AE_MATRIX_F_GET(temp, i, j + m.cols);                  \
             }                                                                                          \
         }                                                                                              \
+        AE_MATRIX_F_FREE(temp);                                                                        \
     }
 
 #endif //__AETHER_GEOMETRY__

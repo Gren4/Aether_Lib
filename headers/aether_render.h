@@ -1,3 +1,4 @@
+// based on https://github.com/ssloy/tinyrenderer/wiki
 #ifndef __AETHER_RENDER__
 #define __AETHER_RENDER__
 
@@ -7,6 +8,8 @@
 void line_ae_render(ae_vec3_f p1, ae_vec3_f p2, ae_tga_i *image, ae_tga_c *color);
 void triangle_ae_render(ae_tga_i *image, ae_tga_i *texture, ae_vec3_f *p, ae_vec2_f *uv, double intensity, double *zbuffer);
 ae_vec3_f barycentric_ae_render(ae_vec3_f A, ae_vec3_f B, ae_vec3_f C, ae_vec3_f P);
+
+#define PI 3.14159265
 
 #define AE_M2V_RENDER(v, m)                                    \
     ae_vec3_f v;                                               \

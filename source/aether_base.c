@@ -465,6 +465,9 @@ uint8_t swap_ae_base(ae_base *const base, const size_t *const data_size, size_t 
 
 uint8_t optimize_ae_base(ae_base *const base, const size_t *const data_size)
 {
+    if (base->quant == 0)
+        return 0;
+
     void *p = realloc(base->memory, base->quant * (*data_size));
 
     if (p == NULL)

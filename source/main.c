@@ -106,7 +106,7 @@ int main(void)
     AE_TGA_C_RGBA(white, 255, 255, 255, 255);
     AE_TGA_C_RGBA(red, 255, 0, 0, 255);
     tic = clock();
-    ae_tga_i image = create_ae_tga(800,800,RGBA);
+    ae_tga_i image = create_ae_tga(2000,2000,RGBA);
     toc = clock();
     printf("TGA create execution time: %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);
 

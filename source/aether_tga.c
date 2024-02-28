@@ -1,3 +1,4 @@
+// based on https://github.com/ssloy/tinyrenderer/wiki
 #include "aether_tga.h"
 #include <string.h>
 #include <stdlib.h>
