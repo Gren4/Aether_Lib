@@ -4,6 +4,11 @@
 #include <string.h>
 #include <stdbool.h>
 
+#define VERTICES_FLAG 30240
+#define FACES_FLAG 26144
+#define UVS_FLAG 30324
+#define NORMALS_FLAG 30318
+
 ae_model open_ae_model(const char *m_filename, const char *t_filename)
 {
     ae_model new_model = {
@@ -33,7 +38,7 @@ ae_model open_ae_model(const char *m_filename, const char *t_filename)
         type = a[0] << 8 | a[1];
         switch (type)
         {
-        case 30240: // v
+        case VERTICES_FLAG:
         {
             ae_vec3_f v;
             fscanf(in, "%lf %lf %lf\n", &v.x, &v.y, &v.z);
@@ -41,16 +46,18 @@ ae_model open_ae_model(const char *m_filename, const char *t_filename)
         }
         break;
 
-        case 30324: // vt
+        case UVS_FLAG:
         {
             ae_vec2_f uv;
             double temp;
             fscanf(in, "  %lf %lf %lf\n", &uv.u, &uv.v, &temp);
+            uv.u = 1.0 - uv.u;
+            uv.v = 1.0 - uv.v;
             append_ae_vector(&new_model.uvs, &uv);
         }
         break;
 
-        case 30318: //vn
+        case NORMALS_FLAG:
         {
             ae_vec3_f vn;
             fscanf(in, "  %lf %lf %lf\n", &vn.x, &vn.y, &vn.z);
@@ -58,7 +65,7 @@ ae_model open_ae_model(const char *m_filename, const char *t_filename)
         }
         break;
 
-        case 26144: // f
+        case FACES_FLAG:
         {
             ae_face faces[3];
             fscanf(in, "%lld/%lld/%lld %lld/%lld/%lld %lld/%lld/%lld\n", &faces[0].v_i, &faces[0].uv_i, &faces[0].norm_i, &faces[1].v_i, &faces[1].uv_i, &faces[1].norm_i, &faces[2].v_i, &faces[2].uv_i, &faces[2].norm_i);
@@ -124,7 +131,7 @@ void uv_ae_model(ae_model *model, size_t i, ae_vec2_f *uv)
     return;
 }
 
-void norm_ae_model(ae_model *model, size_t i, ae_vec3_f *norm)
+void normal_ae_model(ae_model *model, size_t i, ae_vec3_f *norm)
 {
     get_ae_vector(&model->normals, i, norm);
     return;

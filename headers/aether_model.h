@@ -29,6 +29,6 @@ size_t n_faces_ae_model(ae_model *model);
 void vert_ae_model(ae_model *model, size_t i, ae_vec3_f *vert);
 void face_ae_model(ae_model *model, size_t i, ae_face *face);
 void uv_ae_model(ae_model *model, size_t i, ae_vec2_f *uv);
-void norm_ae_model(ae_model *model, size_t i, ae_vec3_f *norm);
+void normal_ae_model(ae_model *model, size_t i, ae_vec3_f *norm);
 
 #endif // __AETHER_MODEL__

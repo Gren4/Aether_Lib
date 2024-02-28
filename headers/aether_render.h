@@ -6,13 +6,12 @@
 #include "aether_model.h"
 
 void line_ae_render(ae_vec3_f p1, ae_vec3_f p2, ae_tga_i *image, ae_tga_c *color);
-void triangle_ae_render(ae_tga_i *image, ae_tga_i *texture, ae_vec3_f *p, ae_vec2_f *uv, double intensity, double *zbuffer);
+void triangle_ae_render(ae_tga_i *image, ae_tga_i *texture, ae_vec3_f *p, ae_vec2_f *uvs, double *intensity, double *zbuffer);
 ae_vec3_f barycentric_ae_render(ae_vec3_f A, ae_vec3_f B, ae_vec3_f C, ae_vec3_f P);
 
 #define PI 3.14159265
 
 #define AE_M2V_RENDER(v, m)                                    \
-    ae_vec3_f v;                                               \
     v.x = AE_MATRIX_F_GET(m, 0, 0) / AE_MATRIX_F_GET(m, 3, 0); \
     v.y = AE_MATRIX_F_GET(m, 1, 0) / AE_MATRIX_F_GET(m, 3, 0); \
     v.z = AE_MATRIX_F_GET(m, 2, 0) / AE_MATRIX_F_GET(m, 3, 0);
@@ -60,6 +59,34 @@ ae_vec3_f barycentric_ae_render(ae_vec3_f A, ae_vec3_f B, ae_vec3_f C, ae_vec3_f
     AE_MATRIX_F_GET(m, 0, 0) = AE_MATRIX_F_GET(m, 1, 1) = c; \
     AE_MATRIX_F_GET(m, 0, 1) = -s;                           \
     AE_MATRIX_F_GET(m, 1, 0) = s;
+
+#define AE_LOOK_AT(m, eye, center, up)                 \
+    AE_MATRIX_F_IDENTITY(m, 4);                        \
+    {                                                  \
+        ae_vec3_f z;                                   \
+        AE_VEC3_DIF(z, eye, center);                   \
+        AE_VEC3_NORMALIZE(z, z, 1);                    \
+        ae_vec3_f x;                                   \
+        AE_VEC3_CROSS(x, up, z);                       \
+        AE_VEC3_NORMALIZE(x, x, 1);                    \
+        ae_vec3_f y;                                   \
+        AE_VEC3_CROSS(y, z, x);                        \
+        AE_VEC3_NORMALIZE(y, y, 1);                    \
+        for (size_t i = 0; i < 3; i++)                 \
+        {                                              \
+            AE_MATRIX_F_GET(m, 0, i) = x.raw[i];       \
+            AE_MATRIX_F_GET(m, 1, i) = y.raw[i];       \
+            AE_MATRIX_F_GET(m, 2, i) = z.raw[i];       \
+            AE_MATRIX_F_GET(m, i, 3) = -center.raw[i]; \
+        }                                              \
+    }
+
+#define AE_DEFORM(vp, v)                      \
+    {                                         \
+        AE_V2M_RENDER(m_1, v);                \
+        AE_MATRIX_F_MULT(m_2, vp, m_1, 4, 1); \
+        AE_M2V_RENDER(v, m_2);                \
+    }
 
 void render_model(ae_model *model, ae_tga_i *image);
 
