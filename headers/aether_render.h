@@ -5,9 +5,15 @@
 #include "aether_tga.h"
 #include "aether_model.h"
 
+typedef struct ae_render_data
+{
+    ae_vec3_f p[3];
+    ae_vec2_f uvs[3];
+    double intensity[3];
+} ae_render_data;
+
 void line_ae_render(ae_vec3_f p1, ae_vec3_f p2, ae_tga_i *image, ae_tga_c *color);
-void triangle_ae_render(ae_tga_i *image, ae_tga_i *texture, ae_vec3_f *p, ae_vec2_f *uvs, double *intensity, double *zbuffer);
-ae_vec3_f barycentric_ae_render(ae_vec3_f A, ae_vec3_f B, ae_vec3_f C, ae_vec3_f P);
+void triangle_ae_render(ae_tga_i *image, ae_tga_i *texture, ae_render_data* data, double *zbuffer);
 
 #define PI 3.14159265
 

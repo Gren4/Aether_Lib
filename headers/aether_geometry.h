@@ -60,6 +60,19 @@ typedef AE_VEC3_TEMPLATE(int32_t, ae_vec3_i);
         result.u = v1.u * f;          \
         result.v = v1.v * f;          \
     }
+#define AE_VEC2_V_PLUS_DIF_MULT(result, v1, v2, v3, f) \
+    {                                                  \
+        result.x = v1.x + (v2.x - v3.x) * f;           \
+        result.y = v1.y + (v2.y - v3.y) * f;           \
+    }
+#define AE_VEC2_F_CREATE_FROM(result, v) \
+    ae_vec2_f result;                    \
+    result.x = (double)v.x;              \
+    result.y = (double)v.y;
+#define AE_VEC2_I_CREATE_FROM(result, v) \
+    ae_vec2_i result;                    \
+    result.x = (int32_t)v.x;             \
+    result.y = (int32_t)v.y;
 
 #define AE_VEC3_CROSS(result, v1, v2)         \
     {                                         \
@@ -92,6 +105,22 @@ typedef AE_VEC3_TEMPLATE(int32_t, ae_vec3_i);
         double f = l / AE_VEC3_NORM(v1); \
         AE_VEC3_F_MULT(result, v1, f);   \
     }
+#define AE_VEC3_V_PLUS_DIF_MULT(result, v1, v2, v3, f) \
+    {                                                  \
+        result.x = v1.x + (v2.x - v3.x) * f;           \
+        result.y = v1.y + (v2.y - v3.y) * f;           \
+        result.z = v1.z + (v2.z - v3.z) * f;           \
+    }
+#define AE_VEC3_F_CREATE_FROM(result, v) \
+    ae_vec3_f result;                    \
+    result.x = (double)v.x;              \
+    result.y = (double)v.y;              \
+    result.z = (double)v.z;
+#define AE_VEC3_I_CREATE_FROM(result, v) \
+    ae_vec3_i result;                    \
+    result.x = (int32_t)v.x;             \
+    result.y = (int32_t)v.y;             \
+    result.z = (int32_t)v.z;
 
 #define AE_MATRIX_F_CREATE(name, r, c) \
     struct                             \
