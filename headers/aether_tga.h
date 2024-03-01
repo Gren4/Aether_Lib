@@ -40,6 +40,7 @@ typedef struct ae_tga_c
 	int32_t bytespp;
 } ae_tga_c;
 
+#define AE_TGA_SET_INTENSITY(color, i) color.r *= i; color.g *= i; color.b *= i;
 #define AE_TGA_C_DEF(color) ae_tga_c color = {.val = 0, .bytespp = 1};
 #define AE_TGA_C_RGBA(color, R, G, B, A) ae_tga_c color = {.r = R, .g = G, .b = B, .a = A, .bytespp = 4};
 #define AE_TGA_C_V(color, v, bpp) ae_tga_c color = {.val = v, .bytespp = bpp};

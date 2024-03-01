@@ -13,14 +13,20 @@ typedef struct ae_render_data
 } ae_render_data;
 
 void line_ae_render(ae_vec3_f p1, ae_vec3_f p2, ae_tga_i *image, ae_tga_c *color);
-void triangle_ae_render(ae_tga_i *image, ae_tga_i *texture, ae_render_data* data, double *zbuffer);
+ae_vec3_f barycentric_ae_render(ae_vec3_f *A, ae_vec3_f *P);
+void triangle_ae_render(ae_tga_i *image, ae_model *model, ae_render_data *data, double *zbuffer);
 
 #define PI 3.14159265
 
-#define AE_M2V_RENDER(v, m)                                    \
-    v.x = AE_MATRIX_F_GET(m, 0, 0) / AE_MATRIX_F_GET(m, 3, 0); \
-    v.y = AE_MATRIX_F_GET(m, 1, 0) / AE_MATRIX_F_GET(m, 3, 0); \
-    v.z = AE_MATRIX_F_GET(m, 2, 0) / AE_MATRIX_F_GET(m, 3, 0);
+#define AE_M2VI_RENDER(v, m)                                              \
+    v.x = (int32_t)(AE_MATRIX_F_GET(m, 0, 0) / AE_MATRIX_F_GET(m, 3, 0)); \
+    v.y = (int32_t)(AE_MATRIX_F_GET(m, 1, 0) / AE_MATRIX_F_GET(m, 3, 0)); \
+    v.z = (int32_t)(AE_MATRIX_F_GET(m, 2, 0) / AE_MATRIX_F_GET(m, 3, 0));
+
+#define AE_M2VF_RENDER(v, m)                                     \
+    v.x = (AE_MATRIX_F_GET(m, 0, 0) / AE_MATRIX_F_GET(m, 3, 0)); \
+    v.y = (AE_MATRIX_F_GET(m, 1, 0) / AE_MATRIX_F_GET(m, 3, 0)); \
+    v.z = (AE_MATRIX_F_GET(m, 2, 0) / AE_MATRIX_F_GET(m, 3, 0));
 
 #define AE_V2M_RENDER(m, v)         \
     AE_MATRIX_F_CREATE(m, 4, 1);    \
@@ -91,7 +97,7 @@ void triangle_ae_render(ae_tga_i *image, ae_tga_i *texture, ae_render_data* data
     {                                         \
         AE_V2M_RENDER(m_1, v);                \
         AE_MATRIX_F_MULT(m_2, vp, m_1, 4, 1); \
-        AE_M2V_RENDER(v, m_2);                \
+        AE_M2VI_RENDER(v, m_2);                \
     }
 
 void render_model(ae_model *model, ae_tga_i *image);

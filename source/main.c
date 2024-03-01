@@ -15,7 +15,7 @@ int main(void)
     printf("Open model execution time: %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);
 
     tic = clock();
-    ae_tga_i image = create_ae_tga(960,640,RGBA);
+    ae_tga_i image = create_ae_tga(720,480,RGBA);
     toc = clock();
     printf("TGA create execution time: %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);
 
