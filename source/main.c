@@ -10,12 +10,12 @@ int main(void)
     clock_t tic, toc;
 
     tic = clock();
-    ae_model model = open_ae_model("african_head.obj", "african_head_diffuse.tga");
+    ae_model model = open_ae_model("african_head.obj", "african_head_diffuse.tga", "african_head_nm_tangent.tga", "african_head_spec.tga");
     toc = clock();
     printf("Open model execution time: %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);
 
     tic = clock();
-    ae_tga_i image = create_ae_tga(720,480,RGBA);
+    ae_tga_i image = create_ae_tga(1440,960,RGBA);
     toc = clock();
     printf("TGA create execution time: %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);
 

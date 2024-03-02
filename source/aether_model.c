@@ -9,14 +9,18 @@
 #define UVS_FLAG 30324
 #define NORMALS_FLAG 30318
 
-ae_model open_ae_model(const char *m_filename, const char *t_filename)
+ae_model open_ae_model(const char *m_filename, const char *t_filename, const char *nm_filename, const char *sm_filename)
 {
     ae_model new_model = {
         .verts = create_ae_vector(sizeof(ae_vec3_f), 0),
         .faces = create_ae_vector(sizeof(ae_face) * 3, 0),
         .uvs = create_ae_vector(sizeof(ae_vec2_f), 0),
         .normals = create_ae_vector(sizeof(ae_vec3_f), 0),
-        .texture = {.data = NULL}};
+        .texture = {.data = NULL},
+        .normal_map = {.data = NULL},
+        .specular_map = {.data = NULL}
+    };
+
     FILE *in;
     if ((in = fopen(m_filename, "rb")) == NULL)
     {
@@ -26,6 +30,16 @@ ae_model open_ae_model(const char *m_filename, const char *t_filename)
     if (t_filename != NULL)
     {
         read_file_ae_tga(&new_model.texture, t_filename);
+    }
+
+    if (nm_filename != NULL)
+    {
+        read_file_ae_tga(&new_model.normal_map, nm_filename);
+    }
+
+    if (sm_filename != NULL)
+    {
+        read_file_ae_tga(&new_model.specular_map, sm_filename);
     }
 
     int32_t type = 0;
@@ -103,36 +117,74 @@ void close_ae_model(ae_model *model)
     return;
 }
 
-size_t n_verts_ae_model(ae_model *model)
+size_t n_verts_ae_model(ae_model const *model)
 {
     return model->verts.data.quant;
 }
 
-size_t n_faces_ae_model(ae_model *model)
+size_t n_faces_ae_model(ae_model const *model)
 {
     return model->faces.data.quant;
 }
 
-void vert_ae_model(ae_model *model, size_t i, ae_vec3_f *vert)
+void vert_ae_model(ae_model const *model, const size_t i, ae_vec3_f *vert)
 {
     get_ae_vector(&model->verts, i, vert);
     return;
 }
 
-void face_ae_model(ae_model *model, size_t i, ae_face *face)
+void face_ae_model(ae_model const *model, const size_t i, ae_face *face)
 {
     get_ae_vector(&model->faces, i, face);
     return;
 }
 
-void uv_ae_model(ae_model *model, size_t i, ae_vec2_f *uv)
+void uv_ae_model(ae_model const *model, const size_t i, ae_vec2_f *uv)
 {
     get_ae_vector(&model->uvs, i, uv);
     return;
 }
 
-void normal_ae_model(ae_model *model, size_t i, ae_vec3_f *norm)
+void normal_ae_model(ae_model const *model, const size_t i, ae_vec3_f *norm)
 {
     get_ae_vector(&model->normals, i, norm);
     return;
+}
+
+ae_tga_c texture_ae_model(ae_model const *model, ae_vec2_f const *uv)
+{
+    AE_TGA_C_RGBA(new_color, 255, 255, 255, 255);
+    if (model->texture.data != NULL)
+        new_color = get_ae_tga(&model->texture, uv->u * model->texture.width, uv->v * model->texture.height);
+    return new_color;
+}
+
+ae_vec3_f normal_map_ae_model(ae_model const *model, ae_vec2_f const *uv)
+{
+    ae_vec3_f normal_map = {.x = 0.0, .y = 0.0, .z = 0.0};
+
+    if (model->normal_map.data != NULL)
+    {
+        AE_TGA_C_RGBA(new_color, 0, 0, 0, 0);
+        new_color = get_ae_tga(&model->normal_map, uv->u * model->normal_map.width, uv->v * model->normal_map.height);
+        normal_map.x = ((double)new_color.r / 255.0) * 2.0 - 1.0;
+        normal_map.y = ((double)new_color.g / 255.0) * 2.0 - 1.0;
+        normal_map.z = ((double)new_color.b / 255.0) * 2.0 - 1.0;
+    }
+
+    return normal_map;
+}
+
+double specular_map_ae_model(ae_model const *model, ae_vec2_f const *uv)
+{
+    double coeff = 0.0;
+
+    if (model->specular_map.data != NULL)
+    {
+        AE_TGA_C_RGBA(new_color, 0, 0, 0, 0);
+        new_color = get_ae_tga(&model->specular_map, uv->u * model->specular_map.width, uv->v * model->specular_map.height);
+        coeff = new_color.raw[0];
+    }
+
+    return coeff;
 }

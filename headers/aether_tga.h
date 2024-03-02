@@ -77,9 +77,9 @@ bool read_file_ae_tga(ae_tga_i *image, const char *filename);
 bool write_file_ae_tga(ae_tga_i *image, const char *filename, bool rle);
 bool flip_horizontally_ae_tga(ae_tga_i *image);
 bool flip_vertically_ae_tga(ae_tga_i *image);
-bool scale_ae_tga(ae_tga_i *image, int32_t w, int32_t h);
-ae_tga_c get_ae_tga(ae_tga_i *image, int32_t x, int32_t y);
-bool set_ae_tga(ae_tga_i *image, int32_t x, int32_t y, ae_tga_c *c);
+bool scale_ae_tga(ae_tga_i *image, const int32_t w, const int32_t h);
+ae_tga_c get_ae_tga(ae_tga_i const *image, const int32_t x, const int32_t y);
+bool set_ae_tga(ae_tga_i *image, const int32_t x, const int32_t y, ae_tga_c const *c);
 void free_ae_tga(ae_tga_i *image);
 void clear_ae_tga(ae_tga_i *image);
 

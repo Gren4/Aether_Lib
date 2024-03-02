@@ -7,7 +7,7 @@
 #include <string.h>
 
 #define AE_VEC2_TEMPLATE(type, name) \
-    struct name                      \
+    typedef struct name              \
     {                                \
         union                        \
         {                            \
@@ -24,7 +24,7 @@
     } name;
 
 #define AE_VEC3_TEMPLATE(type, name)    \
-    struct name                         \
+    typedef struct name                 \
     {                                   \
         union                           \
         {                               \
@@ -40,10 +40,10 @@
         };                              \
     } name;
 
-typedef AE_VEC2_TEMPLATE(double, ae_vec2_f);
-typedef AE_VEC2_TEMPLATE(int32_t, ae_vec2_i);
-typedef AE_VEC3_TEMPLATE(double, ae_vec3_f);
-typedef AE_VEC3_TEMPLATE(int32_t, ae_vec3_i);
+AE_VEC2_TEMPLATE(double, ae_vec2_f);
+AE_VEC2_TEMPLATE(int32_t, ae_vec2_i);
+AE_VEC3_TEMPLATE(double, ae_vec3_f);
+AE_VEC3_TEMPLATE(int32_t, ae_vec3_i);
 
 #define AE_VEC2_SUM(result, v1, v2) \
     {                               \
@@ -122,20 +122,27 @@ typedef AE_VEC3_TEMPLATE(int32_t, ae_vec3_i);
     result.y = (int32_t)v.y;             \
     result.z = (int32_t)v.z;
 
-#define AE_MATRIX_F_CREATE(name, r, c) \
-    struct                             \
+#define AE_MATRIX_F_TEMPLATE(r, c)     \
+    typedef struct ae_matrix_##r##_##c \
     {                                  \
         double data[r * c];            \
         size_t rows;                   \
         size_t cols;                   \
-    } name;                            \
-    name.rows = (r);                   \
-    name.cols = (c);
+    } ae_matrix_##r##_##c;
+
+AE_MATRIX_F_TEMPLATE(4, 4);
+AE_MATRIX_F_TEMPLATE(4, 1);
+AE_MATRIX_F_TEMPLATE(1, 4);
+
+#define AE_MATRIX_F_DECLARE(name, r, c) \
+    ae_matrix_##r##_##c name
+
+#define AE_MATRIX_F_CREATE(name, r, c) \
+    AE_MATRIX_F_DECLARE(name, r, c) = {.rows = r, .cols = c};
 
 #define AE_MATRIX_F_GET(m, r, c) (m.data[(c) + m.cols * (r)])
 
 #define AE_MATRIX_F_IDENTITY(name, dim)                         \
-    AE_MATRIX_F_CREATE(name, dim, dim);                         \
     for (size_t i = 0; i < dim; i++)                            \
     {                                                           \
         for (size_t j = 0; j < dim; j++)                        \
@@ -144,8 +151,11 @@ typedef AE_VEC3_TEMPLATE(int32_t, ae_vec3_i);
         }                                                       \
     }
 
+#define AE_MATRIX_F_IDENTITY_CREATE(name, dim) \
+    AE_MATRIX_F_CREATE(name, dim, dim);        \
+    AE_MATRIX_F_IDENTITY(name, dim);
+
 #define AE_MATRIX_F_MULT(result, m1, m2, r1, c2)                                                            \
-    AE_MATRIX_F_CREATE(result, r1, c2);                                                                     \
     if (m1.cols == m2.rows)                                                                                 \
     {                                                                                                       \
         for (size_t i = 0; i < m1.rows; i++)                                                                \
@@ -161,28 +171,42 @@ typedef AE_VEC3_TEMPLATE(int32_t, ae_vec3_i);
         }                                                                                                   \
     }
 
+#define AE_MATRIX_F_MULT_CREATE(result, m1, m2, r1, c2) \
+    AE_MATRIX_F_CREATE(result, r1, c2);                 \
+    AE_MATRIX_F_MULT(result, m1, m2, r1, c2);
+
 #define AE_MATRIX_F_TRANSPOSE(result, m, r, c)                        \
-    AE_MATRIX_F_CREATE(result, r, c);                                 \
     for (size_t i = 0; i < m.rows; i++)                               \
     {                                                                 \
-        for (size_t j = 0; j > m.cols; j++)                           \
+        for (size_t j = 0; j < m.cols; j++)                           \
         {                                                             \
             AE_MATRIX_F_GET(result, j, i) = AE_MATRIX_F_GET(m, i, j); \
         }                                                             \
     }
 
+#define AE_MATRIX_F_TRANSPOSE_CREATE(result, m, r, c) \
+    AE_MATRIX_F_CREATE(result, r, c);                 \
+    AE_MATRIX_F_TRANSPOSE(result, m, r, c);
+
 #define AE_MATRIX_F_INVERSE(result, m, r, c)                                                           \
-    AE_MATRIX_F_CREATE(result, r, c);                                                                  \
     if (m.rows == m.cols)                                                                              \
     {                                                                                                  \
-        AE_MATRIX_F_CREATE(temp, r, c * 2);                                                            \
+        struct                                                                                         \
+        {                                                                                              \
+            double data[r * c * 2];                                                                    \
+            size_t rows;                                                                               \
+            size_t cols;                                                                               \
+        } temp = {.rows = r, .cols = c * 2};                                                           \
         for (size_t i = 0; i < m.rows; i++)                                                            \
         {                                                                                              \
             for (size_t j = 0; j < m.cols; j++)                                                        \
             {                                                                                          \
                 AE_MATRIX_F_GET(temp, i, j) = AE_MATRIX_F_GET(m, i, j);                                \
+                if (i == j)                                                                            \
+                    AE_MATRIX_F_GET(temp, i, j + m.cols) = 1.0;                                        \
+                else                                                                                   \
+                    AE_MATRIX_F_GET(temp, i, j + m.cols) = 0.0;                                        \
             }                                                                                          \
-            AE_MATRIX_F_GET(temp, i, i + m.cols) = 1.0;                                                \
         }                                                                                              \
                                                                                                        \
         for (size_t i = 0; i < m.rows - 1; i++)                                                        \
@@ -223,5 +247,73 @@ typedef AE_VEC3_TEMPLATE(int32_t, ae_vec3_i);
             }                                                                                          \
         }                                                                                              \
     }
+
+#define AE_MATRIX_F_INVERSE_CREATE(result, m, r, c) \
+    AE_MATRIX_F_CREATE(result, r, c);               \
+    AE_MATRIX_F_INVERSE(result, m, r, c);
+
+#define AE_MATRIX_F_INVERSE_TRANSPOSE(result, m, r, c)                                                 \
+    if (m.rows == m.cols)                                                                              \
+    {                                                                                                  \
+        struct                                                                                         \
+        {                                                                                              \
+            double data[r * c * 2];                                                                    \
+            size_t rows;                                                                               \
+            size_t cols;                                                                               \
+        } temp = {.rows = r, .cols = c * 2};                                                           \
+        for (size_t i = 0; i < m.rows; i++)                                                            \
+        {                                                                                              \
+            for (size_t j = 0; j < m.cols; j++)                                                        \
+            {                                                                                          \
+                AE_MATRIX_F_GET(temp, i, j) = AE_MATRIX_F_GET(m, i, j);                                \
+                if (i == j)                                                                            \
+                    AE_MATRIX_F_GET(temp, i, j + m.cols) = 1.0;                                        \
+                else                                                                                   \
+                    AE_MATRIX_F_GET(temp, i, j + m.cols) = 0.0;                                        \
+            }                                                                                          \
+        }                                                                                              \
+                                                                                                       \
+        for (size_t i = 0; i < m.rows - 1; i++)                                                        \
+        {                                                                                              \
+            for (size_t j = temp.cols; j > 0; j--)                                                     \
+            {                                                                                          \
+                AE_MATRIX_F_GET(temp, i, j - 1) /= AE_MATRIX_F_GET(temp, i, i);                        \
+            }                                                                                          \
+            for (size_t k = i + 1; k < m.rows; k++)                                                    \
+            {                                                                                          \
+                double coeff = AE_MATRIX_F_GET(temp, k, i);                                            \
+                for (size_t j = 0; j < temp.cols; j++)                                                 \
+                {                                                                                      \
+                    AE_MATRIX_F_GET(temp, k, j) -= AE_MATRIX_F_GET(temp, i, j) * coeff;                \
+                }                                                                                      \
+            }                                                                                          \
+        }                                                                                              \
+                                                                                                       \
+        for (size_t j = temp.cols; j >= m.rows; j--)                                                   \
+            AE_MATRIX_F_GET(temp, m.rows - 1, j - 1) /= AE_MATRIX_F_GET(temp, m.rows - 1, m.rows - 1); \
+                                                                                                       \
+        for (size_t i = m.rows - 1; i > 0; i--)                                                        \
+        {                                                                                              \
+            for (size_t k = i; k > 0; k--)                                                             \
+            {                                                                                          \
+                double coeff = AE_MATRIX_F_GET(temp, k - 1, i);                                        \
+                for (size_t j = 0; j < temp.cols; j++)                                                 \
+                {                                                                                      \
+                    AE_MATRIX_F_GET(temp, k - 1, j) -= AE_MATRIX_F_GET(temp, i, j) * coeff;            \
+                }                                                                                      \
+            }                                                                                          \
+        }                                                                                              \
+        for (size_t i = 0; i < m.rows; i++)                                                            \
+        {                                                                                              \
+            for (size_t j = 0; j < m.cols; j++)                                                        \
+            {                                                                                          \
+                AE_MATRIX_F_GET(result, j, i) = AE_MATRIX_F_GET(temp, i, j + m.cols);                  \
+            }                                                                                          \
+        }                                                                                              \
+    }
+
+#define AE_MATRIX_F_INVERSE_TRANSPOSE_CREATE(result, m, r, c) \
+    AE_MATRIX_F_CREATE(result, r, c);                         \
+    AE_MATRIX_F_INVERSE_TRANSPOSE(result, m, r, c);
 
 #endif //__AETHER_GEOMETRY__

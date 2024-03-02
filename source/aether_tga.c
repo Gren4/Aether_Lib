@@ -299,7 +299,7 @@ bool unload_rle_data_ae_tga(ae_tga_i *image, FILE *out)
     return true;
 }
 
-ae_tga_c get_ae_tga(ae_tga_i *image, int32_t x, int32_t y)
+ae_tga_c get_ae_tga(ae_tga_i const *image, const int32_t x, const int32_t y)
 {
     if (image->data == NULL || x < 0 || y < 0 || x >= image->width || y >= image->height)
     {
@@ -313,7 +313,7 @@ ae_tga_c get_ae_tga(ae_tga_i *image, int32_t x, int32_t y)
     }
 }
 
-bool set_ae_tga(ae_tga_i *image, int32_t x, int32_t y, ae_tga_c *c)
+bool set_ae_tga(ae_tga_i *image, const int32_t x, const int32_t y, ae_tga_c const *c)
 {
     if (image->data == NULL || x < 0 || y < 0 || x >= image->width || y >= image->height)
     {
@@ -374,7 +374,7 @@ void clear_ae_tga(ae_tga_i *image)
     return;
 }
 
-bool scale_ae_tga(ae_tga_i *image, int32_t w, int32_t h)
+bool scale_ae_tga(ae_tga_i *image, const int32_t w, const int32_t h)
 {
     if (w <= 0 || h <= 0 || image->data == NULL)
         return false;
