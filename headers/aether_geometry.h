@@ -46,21 +46,21 @@ AE_VEC3_TEMPLATE(double, ae_vec3_f);
 AE_VEC3_TEMPLATE(int32_t, ae_vec3_i);
 
 #define AE_VEC2_SUM(result, v1, v2) \
-        result.u = v1.u + v2.u;     \
-        result.v = v1.v + v2.v;     \
-        
+    result.u = v1.u + v2.u;         \
+    result.v = v1.v + v2.v;
+
 #define AE_VEC2_DIF(result, v1, v2) \
-        result.u = v1.u - v2.u;     \
-        result.v = v1.v - v2.v;     \
-        
+    result.u = v1.u - v2.u;         \
+    result.v = v1.v - v2.v;
+
 #define AE_VEC2_F_MULT(result, v1, f) \
-        result.u = v1.u * f;          \
-        result.v = v1.v * f;          \
-        
+    result.u = v1.u * f;              \
+    result.v = v1.v * f;
+
 #define AE_VEC2_V_PLUS_DIF_MULT(result, v1, v2, v3, f) \
-        result.x = v1.x + (v2.x - v3.x) * f;           \
-        result.y = v1.y + (v2.y - v3.y) * f;           \
-        
+    result.x = v1.x + (v2.x - v3.x) * f;               \
+    result.y = v1.y + (v2.y - v3.y) * f;
+
 #define AE_VEC2_F_CREATE_FROM(result, v) \
     ae_vec2_f result;                    \
     result.x = (double)v.x;              \
@@ -70,11 +70,11 @@ AE_VEC3_TEMPLATE(int32_t, ae_vec3_i);
     result.x = (int32_t)v.x;             \
     result.y = (int32_t)v.y;
 
-#define AE_VEC3_CROSS(result, v1, v2)         \
-        result.x = v1.y * v2.z - v1.z * v2.y; \
-        result.y = v1.z * v2.x - v1.x * v2.z; \
-        result.z = v1.x * v2.y - v1.y * v2.x; \
-        
+#define AE_VEC3_CROSS(result, v1, v2)     \
+    result.x = v1.y * v2.z - v1.z * v2.y; \
+    result.y = v1.z * v2.x - v1.x * v2.z; \
+    result.z = v1.x * v2.y - v1.y * v2.x;
+
 #define AE_VEC3_SUM(result, v1, v2) \
     result.x = v1.x + v2.x;         \
     result.y = v1.y + v2.y;         \
@@ -303,20 +303,20 @@ AE_MATRIX_F_TEMPLATE(1, 4);
     AE_MATRIX_F_CREATE(result, r, c);                         \
     AE_MATRIX_F_INVERSE_TRANSPOSE(result, m, r, c);
 
-#define AE_MATRIX_F_SET_ROW_FROM_V_DIF(m, r, v1, v2)          \
-            AE_MATRIX_F_GET(m, r, 0) = v1.raw[0] - v2.raw[0]; \
-            AE_MATRIX_F_GET(m, r, 1) = v1.raw[1] - v2.raw[1]; \
-            AE_MATRIX_F_GET(m, r, 2) = v1.raw[2] - v2.raw[2]; \
+#define AE_MATRIX_F_SET_ROW_FROM_V_DIF(m, r, v1, v2)  \
+    AE_MATRIX_F_GET(m, r, 0) = v1.raw[0] - v2.raw[0]; \
+    AE_MATRIX_F_GET(m, r, 1) = v1.raw[1] - v2.raw[1]; \
+    AE_MATRIX_F_GET(m, r, 2) = v1.raw[2] - v2.raw[2];
 
-#define AE_MATRIX_F_SET_ROW_FROM_V(m, r, v)      \
-            AE_MATRIX_F_GET(m, r, 0) = v.raw[0]; \
-            AE_MATRIX_F_GET(m, r, 1) = v.raw[1]; \
-            AE_MATRIX_F_GET(m, r, 2) = v.raw[2]; \
+#define AE_MATRIX_F_SET_ROW_FROM_V(m, r, v) \
+    AE_MATRIX_F_GET(m, r, 0) = v.raw[0];    \
+    AE_MATRIX_F_GET(m, r, 1) = v.raw[1];    \
+    AE_MATRIX_F_GET(m, r, 2) = v.raw[2];
 
-#define AE_MATRIX_F_SET_COL_FROM_V(m, c, v)      \
-            AE_MATRIX_F_GET(m, 0, c) = v.raw[0]; \
-            AE_MATRIX_F_GET(m, 1, c) = v.raw[1]; \
-            AE_MATRIX_F_GET(m, 2, c) = v.raw[2]; \
+#define AE_MATRIX_F_SET_COL_FROM_V(m, c, v) \
+    AE_MATRIX_F_GET(m, 0, c) = v.raw[0];    \
+    AE_MATRIX_F_GET(m, 1, c) = v.raw[1];    \
+    AE_MATRIX_F_GET(m, 2, c) = v.raw[2];
 
 #define AE_MATRIX_3x3_MULT_V(result, m, v)                                                                                               \
     {                                                                                                                                    \

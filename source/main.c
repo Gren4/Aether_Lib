@@ -15,24 +15,9 @@ int main(void)
     printf("Open model execution time: %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);
 
     tic = clock();
-    ae_tga_i image = create_ae_tga(2880, 1920, RGBA);
-    toc = clock();
-    printf("TGA create execution time: %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);
-
-    tic = clock();
-    render_model(&model, &image);
+    render_model(&model);
     toc = clock();
     printf("Render execution time: %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);
-
-    tic = clock();
-    flip_vertically_ae_tga(&image);
-    toc = clock();
-    printf("Flip TGA execution time: %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);
-
-    tic = clock();
-    write_file_ae_tga(&image, "output.tga", false);
-    toc = clock();
-    printf("Image output execution time: %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);
 
     close_ae_model(&model);
 
