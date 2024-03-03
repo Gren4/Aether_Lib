@@ -1,3 +1,4 @@
+// based on https://github.com/ssloy/tinyrenderer/wiki
 #include "aether_model.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -18,8 +19,7 @@ ae_model open_ae_model(const char *m_filename, const char *t_filename, const cha
         .normals = create_ae_vector(sizeof(ae_vec3_f), 0),
         .texture = {.data = NULL},
         .normal_map = {.data = NULL},
-        .specular_map = {.data = NULL}
-    };
+        .specular_map = {.data = NULL}};
 
     FILE *in;
     if ((in = fopen(m_filename, "rb")) == NULL)
@@ -30,16 +30,19 @@ ae_model open_ae_model(const char *m_filename, const char *t_filename, const cha
     if (t_filename != NULL)
     {
         read_file_ae_tga(&new_model.texture, t_filename);
+        flip_vertically_ae_tga(&new_model.texture);
     }
 
     if (nm_filename != NULL)
     {
         read_file_ae_tga(&new_model.normal_map, nm_filename);
+        flip_vertically_ae_tga(&new_model.normal_map);
     }
 
     if (sm_filename != NULL)
     {
         read_file_ae_tga(&new_model.specular_map, sm_filename);
+        flip_vertically_ae_tga(&new_model.specular_map);
     }
 
     int32_t type = 0;
@@ -65,8 +68,6 @@ ae_model open_ae_model(const char *m_filename, const char *t_filename, const cha
             ae_vec2_f uv;
             double temp;
             fscanf(in, "  %lf %lf %lf\n", &uv.u, &uv.v, &temp);
-            uv.u = 1.0 - uv.u;
-            uv.v = 1.0 - uv.v;
             append_ae_vector(&new_model.uvs, &uv);
         }
         break;

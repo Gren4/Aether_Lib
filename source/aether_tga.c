@@ -114,7 +114,7 @@ bool read_file_ae_tga(ae_tga_i *image, const char *filename)
         flip_vertically_ae_tga(image);
     }
 
-    if (!(header[17] & 0x10))
+    if (header[17] & 0x10)
     {
         flip_horizontally_ae_tga(image);
     }

@@ -76,78 +76,91 @@ ae_vec3_f barycentric_ae_render(ae_vec3_f const *A, ae_vec3_f *P)
     return ret;
 }
 
-#define AE_TRIANGLE_RENDER_CYCLE(n1, n2)                                                                                                       \
-    {                                                                                                                                          \
-        if (point##n2.y >= 0)                                                                                                                  \
-            for (size_t i = (point##n1.y >= 0 ? point##n1.y : 0); i <= ((point##n2.y < image->height) ? point##n2.y : image->height - 1); i++) \
-            {                                                                                                                                  \
-                alpha = (double)(i - point0.y) / total_height;                                                                                 \
-                beta = (double)(i - point##n1.y) / segment_height;                                                                             \
-                                                                                                                                               \
-                P.y = i;                                                                                                                       \
-                                                                                                                                               \
-                A = point0.x + (point2.x - point0.x) * alpha;                                                                                  \
-                B = point##n1.x + (point##n2.x - point##n1.x) * beta;                                                                          \
-                                                                                                                                               \
-                if (A > B)                                                                                                                     \
-                {                                                                                                                              \
-                    swap_ae(double, A, B);                                                                                                     \
-                }                                                                                                                              \
-                if (B >= 0)                                                                                                                    \
-                {                                                                                                                              \
-                    for (size_t j = (int32_t)A >= 0 ? (int32_t)A : 0; j <= (((int32_t)B < image->width) ? (int32_t)B : image->width - 1); j++) \
-                    {                                                                                                                          \
-                        P.x = j;                                                                                                               \
-                        bc_screen = barycentric_ae_render(data->p, &P);                                                                        \
-                        zbuffer_idx = (int32_t)P.x + (int32_t)P.y * image->width;                                                              \
-                        if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0)                                                             \
-                            continue;                                                                                                          \
-                        if (zbuffer_idx < image->width * image->height && zbuffer[zbuffer_idx] < P.z)                                          \
-                        {                                                                                                                      \
-                            uv.u = bc_screen.raw[0] * data->uvs[0].u + bc_screen.raw[1] * data->uvs[1].u + bc_screen.raw[2] * data->uvs[2].u;  \
-                            uv.v = bc_screen.raw[0] * data->uvs[0].v + bc_screen.raw[1] * data->uvs[1].v + bc_screen.raw[2] * data->uvs[2].v;  \
-                                                                                                                                               \
-                            normal = normal_map_ae_model(model, &uv);                                                                          \
-                            if (normal.x == 0 && normal.y == 0 && normal.z == 0)                                                               \
-                            {                                                                                                                  \
-                                normal.x = data->normals[0].x * bc_screen.raw[0] +                                                             \
-                                           data->normals[1].x * bc_screen.raw[1] +                                                             \
-                                           data->normals[2].x * bc_screen.raw[2];                                                              \
-                                normal.y = data->normals[0].y * bc_screen.raw[0] +                                                             \
-                                           data->normals[1].y * bc_screen.raw[1] +                                                             \
-                                           data->normals[2].y * bc_screen.raw[2];                                                              \
-                                normal.z = data->normals[0].z * bc_screen.raw[0] +                                                             \
-                                           data->normals[1].z * bc_screen.raw[1] +                                                             \
-                                           data->normals[2].z * bc_screen.raw[2];                                                              \
-                            }                                                                                                                  \
-                                                                                                                                               \
-                            AE_M_x_V_F_RENDER(normal, Proj_ModelView_IT, normal, 1.0);                                                         \
-                            AE_VEC3_NORMALIZE(normal, normal, 1);                                                                              \
-                            diff = AE_VEC3_DOT(normal, l);                                                                                     \
-                                                                                                                                               \
-                            r = normal;                                                                                                        \
-                            AE_VEC3_F_MULT(r, r, diff * 2.0);                                                                                  \
-                            AE_VEC3_DIF(r, r, l);                                                                                              \
-                            AE_VEC3_NORMALIZE(r, r, 1);                                                                                        \
-                            r.z = r.z < 0.0 ? 0.0 : r.z;                                                                                       \
-                            spec = pow(r.z, specular_map_ae_model(model, &uv));                                                                \
-                                                                                                                                               \
-                            diff = diff < 0.0 ? 0.0 : diff;                                                                                    \
-                                                                                                                                               \
-                            ae_tga_c new_color = texture_ae_model(model, &uv);                                                                 \
-                                                                                                                                               \
-                            intensity = 0.7 * diff + 0.3 * spec;                                                                               \
-                            new_color.raw[0] = new_color.raw[0] * intensity < 255 ? new_color.raw[0] * intensity : 255;                        \
-                            new_color.raw[1] = new_color.raw[1] * intensity < 255 ? new_color.raw[1] * intensity : 255;                        \
-                            new_color.raw[2] = new_color.raw[2] * intensity < 255 ? new_color.raw[2] * intensity : 255;                        \
-                                                                                                                                               \
-                            set_ae_tga(image, (int32_t)P.x, (int32_t)P.y, &new_color);                                                         \
-                                                                                                                                               \
-                            zbuffer[zbuffer_idx] = P.z;                                                                                        \
-                        }                                                                                                                      \
-                    }                                                                                                                          \
-                }                                                                                                                              \
-            }                                                                                                                                  \
+#define AE_TRIANGLE_RENDER_CYCLE(n1, n2)                                                                                                                  \
+    {                                                                                                                                                     \
+        if (point##n2.y >= 0)                                                                                                                             \
+            for (size_t i = (point##n1.y >= 0 ? point##n1.y : 0); i <= ((point##n2.y < image->height) ? point##n2.y : image->height - 1); i++)            \
+            {                                                                                                                                             \
+                alpha = (double)(i - point0.y) / total_height;                                                                                            \
+                beta = (double)(i - point##n1.y) / segment_height;                                                                                        \
+                                                                                                                                                          \
+                P.y = i;                                                                                                                                  \
+                                                                                                                                                          \
+                A = point0.x + (point2.x - point0.x) * alpha;                                                                                             \
+                B = point##n1.x + (point##n2.x - point##n1.x) * beta;                                                                                     \
+                                                                                                                                                          \
+                if (A > B)                                                                                                                                \
+                {                                                                                                                                         \
+                    swap_ae(double, A, B);                                                                                                                \
+                }                                                                                                                                         \
+                if (B >= 0)                                                                                                                               \
+                {                                                                                                                                         \
+                    for (size_t j = (int32_t)A >= 0 ? (int32_t)A : 0; j <= (((int32_t)B < image->width) ? (int32_t)B : image->width - 1); j++)            \
+                    {                                                                                                                                     \
+                        P.x = j;                                                                                                                          \
+                        bc_screen = barycentric_ae_render(data->p, &P);                                                                                   \
+                        zbuffer_idx = (int32_t)P.x + (int32_t)P.y * image->width;                                                                         \
+                        if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0)                                                                        \
+                            continue;                                                                                                                     \
+                        if (zbuffer_idx < image->width * image->height && zbuffer[zbuffer_idx] < P.z)                                                     \
+                        {                                                                                                                                 \
+                            uv.u = bc_screen.raw[0] * data->uvs[0].u + bc_screen.raw[1] * data->uvs[1].u + bc_screen.raw[2] * data->uvs[2].u;             \
+                            uv.v = bc_screen.raw[0] * data->uvs[0].v + bc_screen.raw[1] * data->uvs[1].v + bc_screen.raw[2] * data->uvs[2].v;             \
+                                                                                                                                                          \
+                            bn.x = bc_screen.raw[0] * data->normals[0].x + bc_screen.raw[1] * data->normals[1].x + bc_screen.raw[2] * data->normals[2].x; \
+                            bn.y = bc_screen.raw[0] * data->normals[0].y + bc_screen.raw[1] * data->normals[1].y + bc_screen.raw[2] * data->normals[2].y; \
+                            bn.z = bc_screen.raw[0] * data->normals[0].z + bc_screen.raw[1] * data->normals[1].z + bc_screen.raw[2] * data->normals[2].z; \
+                                                                                                                                                          \
+                            AE_VEC3_NORMALIZE(bn, bn, 1);                                                                                                 \
+                                                                                                                                                          \
+                            AE_MATRIX_F_SET_ROW_FROM_V_DIF(Am, 0, data->orig_p[1], data->orig_p[0]);                                                      \
+                            AE_MATRIX_F_SET_ROW_FROM_V_DIF(Am, 1, data->orig_p[2], data->orig_p[0]);                                                      \
+                            AE_MATRIX_F_SET_ROW_FROM_V(Am, 2, bn);                                                                                        \
+                                                                                                                                                          \
+                            AE_MATRIX_F_INVERSE(AIm, Am, 3, 3);                                                                                           \
+                                                                                                                                                          \
+                            for (size_t i = 0; i < 3; i++)                                                                                                \
+                            {                                                                                                                             \
+                                i_v.raw[i] = (AE_MATRIX_F_GET(AIm, i, 0) * (data->uvs[1].u - data->uvs[0].u) +                                            \
+                                              AE_MATRIX_F_GET(AIm, i, 1) * (data->uvs[2].u - data->uvs[0].u));                                            \
+                                j_v.raw[i] = (AE_MATRIX_F_GET(AIm, i, 0) * (data->uvs[1].v - data->uvs[0].v) +                                            \
+                                              AE_MATRIX_F_GET(AIm, i, 1) * (data->uvs[2].v - data->uvs[0].v));                                            \
+                            }                                                                                                                             \
+                            AE_VEC3_NORMALIZE(i_v, i_v, 1);                                                                                               \
+                            AE_VEC3_NORMALIZE(j_v, j_v, 1);                                                                                               \
+                                                                                                                                                          \
+                            AE_MATRIX_F_SET_COL_FROM_V(Bm, 0, i_v);                                                                                       \
+                            AE_MATRIX_F_SET_COL_FROM_V(Bm, 1, j_v);                                                                                       \
+                            AE_MATRIX_F_SET_COL_FROM_V(Bm, 2, bn);                                                                                        \
+                                                                                                                                                          \
+                            t_normal = normal_map_ae_model(model, &uv);                                                                                   \
+                            AE_MATRIX_3x3_MULT_V(normal, Bm, t_normal);                                                                                   \
+                            AE_VEC3_NORMALIZE(normal, normal, 1);                                                                                         \
+                            diff = AE_VEC3_DOT(normal, l);                                                                                                \
+                                                                                                                                                          \
+                            r = normal;                                                                                                                   \
+                            AE_VEC3_F_MULT(r, r, diff * 2.0);                                                                                             \
+                            AE_VEC3_DIF(r, r, l);                                                                                                         \
+                            AE_VEC3_NORMALIZE(r, r, 1);                                                                                                   \
+                            r.z = max_ae(r.z, 0.0);                                                                                                       \
+                            spec = pow(r.z, specular_map_ae_model(model, &uv));                                                                           \
+                                                                                                                                                          \
+                            diff = max_ae(diff, 0.0);                                                                                                     \
+                                                                                                                                                          \
+                            ae_tga_c new_color = texture_ae_model(model, &uv);                                                                            \
+                                                                                                                                                          \
+                            intensity = 1.0 * diff + 0.3 * spec;                                                                                          \
+                            new_color.raw[0] = 5 + min_ae(new_color.raw[0] * intensity, 255);                                                             \
+                            new_color.raw[1] = 5 + min_ae(new_color.raw[1] * intensity, 255);                                                             \
+                            new_color.raw[2] = 5 + min_ae(new_color.raw[2] * intensity, 255);                                                             \
+                                                                                                                                                          \
+                            set_ae_tga(image, (int32_t)P.x, (int32_t)P.y, &new_color);                                                                    \
+                                                                                                                                                          \
+                            zbuffer[zbuffer_idx] = P.z;                                                                                                   \
+                        }                                                                                                                                 \
+                    }                                                                                                                                     \
+                }                                                                                                                                         \
+            }                                                                                                                                             \
     }
 
 void triangle_ae_render(ae_tga_i *image, ae_model const *model, ae_render_data const *data, double *zbuffer)
@@ -187,6 +200,13 @@ void triangle_ae_render(ae_tga_i *image, ae_model const *model, ae_render_data c
     int32_t zbuffer_idx;
     ae_vec3_f r;
     ae_vec3_f normal;
+    ae_vec3_f t_normal;
+    ae_vec3_f bn;
+    AE_MATRIX_F_CREATE(Am, 3, 3);
+    AE_MATRIX_F_CREATE(AIm, 3, 3);
+    AE_MATRIX_F_CREATE(Bm, 3, 3);
+    ae_vec3_f i_v;
+    ae_vec3_f j_v;
 
     AE_TRIANGLE_RENDER_CYCLE(0, 1);
     segment_height = (point2.y - point1.y) == 0 ? 1 : (point2.y - point1.y);

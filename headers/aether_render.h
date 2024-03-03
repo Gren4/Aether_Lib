@@ -7,6 +7,7 @@
 
 typedef struct ae_render_data
 {
+    ae_vec3_f orig_p[3];
     ae_vec3_f p[3];
     ae_vec2_f uvs[3];
     ae_vec3_f normals[3];

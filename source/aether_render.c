@@ -16,7 +16,7 @@ AE_MATRIX_F_CREATE(r_xyz, 4, 4);
 
 ae_vec3_f light_dir = {.x = 1.0, .y = 1.0, .z = 1.0};
 ae_vec3_f l = {.x = 1.0, .y = 1.0, .z = 1.0};
-ae_vec3_f eye = {.x = 1.0, .y = 1.0, .z = 3.0};
+ae_vec3_f eye = {.x = 0.0, .y = 1.0, .z = 3.0};
 ae_vec3_f center = {.x = 0.0, .y = 0.0, .z = 0.0};
 ae_vec3_f up = {.x = 0.0, .y = 1.0, .z = 0.0};
 
@@ -42,9 +42,7 @@ void render_model(ae_model const *model, ae_tga_i *image)
     AE_MATRIX_F_MULT(Proj_ModelView, Projection, ModelView, 4, 4);
     AE_MATRIX_F_INVERSE_TRANSPOSE(Proj_ModelView_IT, Proj_ModelView, 4, 4);
 
-    AE_MATRIX_F_MULT_CREATE(Z, ViewPort, Proj_ModelView, 4, 4);
-
-    AE_M_x_V_F_RENDER(l, Proj_ModelView, light_dir, 1.0);
+    AE_M_x_V_F_PROJ_RENDER(l, Proj_ModelView, light_dir, 0.0);
     AE_VEC3_NORMALIZE(l, l, 1);
 
     ae_vec3_f x = {.x = 10.0, .y = 0.0, .z = 0.0};
@@ -66,10 +64,12 @@ void render_model(ae_model const *model, ae_tga_i *image)
         face_ae_model(model, i, face);
         for (size_t j = 0; j < 3; j++)
         {
-            vert_ae_model(model, face[j].v_i, &render_data.p[j]);
-            AE_M_x_V_I_RENDER(render_data.p[j], Z, render_data.p[j], 1.0);
+            vert_ae_model(model, face[j].v_i, &render_data.orig_p[j]);
+            AE_M_x_V_F_EMBED_RENDER(render_data.orig_p[j], Proj_ModelView, render_data.orig_p[j]);
+            AE_M_x_V_I_EMBED_RENDER(render_data.p[j], ViewPort, render_data.orig_p[j]);
             uv_ae_model(model, face[j].uv_i, &render_data.uvs[j]);
             normal_ae_model(model, face[j].norm_i, &render_data.normals[j]);
+            AE_M_x_V_F_PROJ_RENDER(render_data.normals[j], Proj_ModelView_IT, render_data.normals[j], 0.0);
         }
 
         triangle_ae_render(image, model, &render_data, zbuffer);
