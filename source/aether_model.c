@@ -10,7 +10,7 @@
 #define UVS_FLAG 30324
 #define NORMALS_FLAG 30318
 
-ae_model open_ae_model(const char *m_filename, const char *t_filename, const char *nm_filename, const char *sm_filename)
+ae_model open_ae_model(const char *m_filename, const char *t_filename, const ae_nm_type nm_type, const char *nm_filename, const char *sm_filename)
 {
     ae_model new_model = {
         .verts = create_ae_vector(sizeof(ae_vec3_f), 0),
@@ -18,6 +18,7 @@ ae_model open_ae_model(const char *m_filename, const char *t_filename, const cha
         .uvs = create_ae_vector(sizeof(ae_vec2_f), 0),
         .normals = create_ae_vector(sizeof(ae_vec3_f), 0),
         .texture = {.data = NULL},
+        .nm_type = AE_NM_NONE,
         .normal_map = {.data = NULL},
         .specular_map = {.data = NULL}};
 
@@ -29,20 +30,23 @@ ae_model open_ae_model(const char *m_filename, const char *t_filename, const cha
 
     if (t_filename != NULL)
     {
-        read_file_ae_tga(&new_model.texture, t_filename);
-        flip_vertically_ae_tga(&new_model.texture);
+        if (read_file_ae_tga(&new_model.texture, t_filename))
+            flip_vertically_ae_tga(&new_model.texture);
     }
 
     if (nm_filename != NULL)
     {
-        read_file_ae_tga(&new_model.normal_map, nm_filename);
-        flip_vertically_ae_tga(&new_model.normal_map);
+        if (read_file_ae_tga(&new_model.normal_map, nm_filename))
+        {
+            new_model.nm_type = nm_type;
+            flip_vertically_ae_tga(&new_model.normal_map);
+        }
     }
 
     if (sm_filename != NULL)
     {
-        read_file_ae_tga(&new_model.specular_map, sm_filename);
-        flip_vertically_ae_tga(&new_model.specular_map);
+        if (read_file_ae_tga(&new_model.specular_map, sm_filename))
+            flip_vertically_ae_tga(&new_model.specular_map);
     }
 
     int32_t type = 0;
@@ -95,8 +99,12 @@ ae_model open_ae_model(const char *m_filename, const char *t_filename, const cha
         break;
 
         default:
-            while ((a[0] = fgetc(in)) != '\n')
-                ;
+            while (true)
+            {
+                a[0] = fgetc(in);
+                if (a[0] == '\n' || a[0] == EOF)
+                    break;
+            }
             break;
         }
     }

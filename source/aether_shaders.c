@@ -63,34 +63,60 @@ static void Shader_fragment(ae_model const *model, ae_vec3_f const *bar, ae_tga_
                     .y = bar->raw[0] * Shader.normals[0].y + bar->raw[1] * Shader.normals[1].y + bar->raw[2] * Shader.normals[2].y,
                     .z = bar->raw[0] * Shader.normals[0].z + bar->raw[1] * Shader.normals[1].z + bar->raw[2] * Shader.normals[2].z};
 
-    AE_VEC3_NORMALIZE(bn, bn, 1);
-
-    AE_MATRIX_F_CREATE(Am, 3, 3);
-    AE_MATRIX_F_SET_ROW_FROM_V_DIF(Am, 0, Shader.orig_p[1], Shader.orig_p[0]);
-    AE_MATRIX_F_SET_ROW_FROM_V_DIF(Am, 1, Shader.orig_p[2], Shader.orig_p[0]);
-    AE_MATRIX_F_SET_ROW_FROM_V(Am, 2, bn);
-
-    AE_MATRIX_F_CREATE(AIm, 3, 3);
-    AE_MATRIX_F_INVERSE(AIm, Am, 3, 3);
-
-    ae_vec3_f i_v = {.x = (AE_MATRIX_F_GET(AIm, 0, 0) * (Shader.uvs[1].u - Shader.uvs[0].u) + AE_MATRIX_F_GET(AIm, 0, 1) * (Shader.uvs[2].u - Shader.uvs[0].u)),
-                     .y = (AE_MATRIX_F_GET(AIm, 1, 0) * (Shader.uvs[1].u - Shader.uvs[0].u) + AE_MATRIX_F_GET(AIm, 1, 1) * (Shader.uvs[2].u - Shader.uvs[0].u)),
-                     .z = (AE_MATRIX_F_GET(AIm, 2, 0) * (Shader.uvs[1].u - Shader.uvs[0].u) + AE_MATRIX_F_GET(AIm, 2, 1) * (Shader.uvs[2].u - Shader.uvs[0].u))};
-    AE_VEC3_NORMALIZE(i_v, i_v, 1);
-
-    ae_vec3_f j_v = {.x = (AE_MATRIX_F_GET(AIm, 0, 0) * (Shader.uvs[1].v - Shader.uvs[0].v) + AE_MATRIX_F_GET(AIm, 0, 1) * (Shader.uvs[2].v - Shader.uvs[0].v)),
-                     .y = (AE_MATRIX_F_GET(AIm, 1, 0) * (Shader.uvs[1].v - Shader.uvs[0].v) + AE_MATRIX_F_GET(AIm, 1, 1) * (Shader.uvs[2].v - Shader.uvs[0].v)),
-                     .z = (AE_MATRIX_F_GET(AIm, 2, 0) * (Shader.uvs[1].v - Shader.uvs[0].v) + AE_MATRIX_F_GET(AIm, 2, 1) * (Shader.uvs[2].v - Shader.uvs[0].v))};
-    AE_VEC3_NORMALIZE(j_v, j_v, 1);
-
-    AE_MATRIX_F_CREATE(Bm, 3, 3);
-    AE_MATRIX_F_SET_COL_FROM_V(Bm, 0, i_v);
-    AE_MATRIX_F_SET_COL_FROM_V(Bm, 1, j_v);
-    AE_MATRIX_F_SET_COL_FROM_V(Bm, 2, bn);
-
-    ae_vec3_f t_normal = normal_map_ae_model(model, &uv);
     ae_vec3_f normal;
-    AE_MATRIX_3x3_MULT_V(normal, Bm, t_normal);
+    switch (model->nm_type)
+    {
+    case AE_NM_NONE:
+    {
+        normal.x = Shader.normals[0].x * bar->raw[0] + Shader.normals[1].x * bar->raw[1] + Shader.normals[2].x * bar->raw[2];
+        normal.y = Shader.normals[0].y * bar->raw[0] + Shader.normals[1].y * bar->raw[1] + Shader.normals[2].y * bar->raw[2];
+        normal.z = Shader.normals[0].z * bar->raw[0] + Shader.normals[1].z * bar->raw[1] + Shader.normals[2].z * bar->raw[2];
+        AE_M_x_V_F_EMBED_RENDER(normal, Proj_ModelView_IT, normal);
+    }
+    break;
+    case AE_NM_TANGENT:
+    {
+        AE_VEC3_NORMALIZE(bn, bn, 1);
+
+        AE_MATRIX_F_CREATE(Am, 3, 3);
+        AE_MATRIX_F_SET_ROW_FROM_V_DIF(Am, 0, Shader.orig_p[1], Shader.orig_p[0]);
+        AE_MATRIX_F_SET_ROW_FROM_V_DIF(Am, 1, Shader.orig_p[2], Shader.orig_p[0]);
+        AE_MATRIX_F_SET_ROW_FROM_V(Am, 2, bn);
+
+        AE_MATRIX_F_CREATE(AIm, 3, 3);
+        AE_MATRIX_F_INVERSE(AIm, Am, 3, 3);
+
+        ae_vec3_f i_v = {.x = (AE_MATRIX_F_GET(AIm, 0, 0) * (Shader.uvs[1].u - Shader.uvs[0].u) + AE_MATRIX_F_GET(AIm, 0, 1) * (Shader.uvs[2].u - Shader.uvs[0].u)),
+                         .y = (AE_MATRIX_F_GET(AIm, 1, 0) * (Shader.uvs[1].u - Shader.uvs[0].u) + AE_MATRIX_F_GET(AIm, 1, 1) * (Shader.uvs[2].u - Shader.uvs[0].u)),
+                         .z = (AE_MATRIX_F_GET(AIm, 2, 0) * (Shader.uvs[1].u - Shader.uvs[0].u) + AE_MATRIX_F_GET(AIm, 2, 1) * (Shader.uvs[2].u - Shader.uvs[0].u))};
+        AE_VEC3_NORMALIZE(i_v, i_v, 1);
+
+        ae_vec3_f j_v = {.x = (AE_MATRIX_F_GET(AIm, 0, 0) * (Shader.uvs[1].v - Shader.uvs[0].v) + AE_MATRIX_F_GET(AIm, 0, 1) * (Shader.uvs[2].v - Shader.uvs[0].v)),
+                         .y = (AE_MATRIX_F_GET(AIm, 1, 0) * (Shader.uvs[1].v - Shader.uvs[0].v) + AE_MATRIX_F_GET(AIm, 1, 1) * (Shader.uvs[2].v - Shader.uvs[0].v)),
+                         .z = (AE_MATRIX_F_GET(AIm, 2, 0) * (Shader.uvs[1].v - Shader.uvs[0].v) + AE_MATRIX_F_GET(AIm, 2, 1) * (Shader.uvs[2].v - Shader.uvs[0].v))};
+        AE_VEC3_NORMALIZE(j_v, j_v, 1);
+
+        AE_MATRIX_F_CREATE(Bm, 3, 3);
+        AE_MATRIX_F_SET_COL_FROM_V(Bm, 0, i_v);
+        AE_MATRIX_F_SET_COL_FROM_V(Bm, 1, j_v);
+        AE_MATRIX_F_SET_COL_FROM_V(Bm, 2, bn);
+
+        ae_vec3_f t_normal = normal_map_ae_model(model, &uv);
+        AE_MATRIX_3x3_MULT_V(normal, Bm, t_normal);
+    }
+    break;
+
+    case AE_NM_GLOBAL:
+    {
+        normal = normal_map_ae_model(model, &uv);
+        AE_M_x_V_F_EMBED_RENDER(normal, Proj_ModelView_IT, normal);
+    }
+    break;
+
+    default:
+        break;
+    }
+
     AE_VEC3_NORMALIZE(normal, normal, 1);
     double diff = AE_VEC3_DOT(normal, l);
 
@@ -115,7 +141,7 @@ static void Shader_fragment(ae_model const *model, ae_vec3_f const *bar, ae_tga_
     double shadow = 0.3 + 0.7 * (shadow_buffer[idx] < sb_p.raw[2] + 43.34);
 
     // Calc sum of coeffs
-    double intensity = (1.0 * diff + 0.3 * spec) * shadow;
+    double intensity = (1.2 * diff + 0.5 * spec) * shadow;
     AE_TGA_SET_P_RGBA(
         color,
         min_ae(5 + color->r * intensity, 255),

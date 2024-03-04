@@ -13,6 +13,13 @@ typedef struct ae_face
     size_t norm_i;
 } ae_face;
 
+typedef enum ae_nm_type
+{
+    AE_NM_NONE,
+    AE_NM_GLOBAL,
+    AE_NM_TANGENT
+} ae_nm_type;
+
 typedef struct ae_model
 {
     ae_vector verts;
@@ -20,11 +27,12 @@ typedef struct ae_model
     ae_vector normals;
     ae_vector uvs;
     ae_tga_i texture;
+    ae_nm_type nm_type;
     ae_tga_i normal_map;
     ae_tga_i specular_map;
 } ae_model;
 
-ae_model open_ae_model(const char *m_filename, const char *t_filename, const char *nm_filename, const char *sm_filename);
+ae_model open_ae_model(const char *m_filename, const char *t_filename, const ae_nm_type nm_type, const char *nm_filename, const char *sm_filename);
 void close_ae_model(ae_model *model);
 size_t n_verts_ae_model(ae_model const *model);
 size_t n_faces_ae_model(ae_model const *model);

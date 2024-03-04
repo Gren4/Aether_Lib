@@ -26,11 +26,11 @@ ae_vec3_f up = {.x = 0.0, .y = 1.0, .z = 0.0};
 double eye_center_dif;
 double *shadow_buffer;
 
-int32_t width = 4000;
-int32_t height = 4000;
+int32_t width = 2000;
+int32_t height = 2000;
 int32_t depth = 2000;
 
-void render_model(ae_model const *model)
+void render_model(ae_vector const *models)
 {
 
     ae_tga_i image = create_ae_tga(width, height, RGBA);
@@ -64,12 +64,16 @@ void render_model(ae_model const *model)
     AE_MATRIX_F_MULT(Proj_ModelView, Projection, ModelView, 4, 4);
     AE_MATRIX_F_MULT(Z, ViewPort, Proj_ModelView, 4, 4);
 
-    for (size_t i = 0; i < n_faces_ae_model(model); i++)
+    ae_model model;
+    for (size_t m = 0; m < models->data.quant; m++)
     {
-        ShadowBufferShader.vertex(model, i);
-        shadow_buffer_ae_render(&image, model, &ShadowBufferShader, shadow_buffer);
+        get_ae_vector(models, m, &model);
+        for (size_t i = 0; i < n_faces_ae_model(&model); i++)
+        {
+            ShadowBufferShader.vertex(&model, i);
+            shadow_buffer_ae_render(&image, &model, &ShadowBufferShader, shadow_buffer);
+        }
     }
-
     Z_shdw = Z;
 
     AE_LOOK_AT_RENDER(ModelView, eye, center, up);
@@ -81,10 +85,14 @@ void render_model(ae_model const *model)
     AE_VEC3_NORMALIZE(l, l, 1);
     AE_SHADOW_M_RENDER(Shadow);
 
-    for (size_t i = 0; i < n_faces_ae_model(model); i++)
+    for (size_t m = 0; m < models->data.quant; m++)
     {
-        Shader.vertex(model, i);
-        triangle_ae_render(&image, model, &Shader, zbuffer);
+        get_ae_vector(models, m, &model);
+        for (size_t i = 0; i < n_faces_ae_model(&model); i++)
+        {
+            Shader.vertex(&model, i);
+            triangle_ae_render(&image, &model, &Shader, zbuffer);
+        }
     }
 
     free(zbuffer);
