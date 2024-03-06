@@ -1,4 +1,5 @@
 #include "aether_base.h"
+#include "aether_gc.h"
 #include <string.h>
 #include <math.h>
 #include <stdio.h>
@@ -63,12 +64,13 @@ uint8_t check_realloc_ae_base(ae_base *const base, const size_t *const data_size
 
         if (p == NULL)
             return 1;
-
 #ifdef DEBUG_AE
         printf("Reallocated memory from address %p to %p\n", base->memory, p);
 #endif
 
         base->memory = p;
+
+        update_ae_gc(base->gc_idx, base->memory);
     }
 
     return 0;
@@ -82,6 +84,23 @@ ae_base init_ae_base(void)
         .max_quant = AETHER_BASE_ADD_SIZE};
 
     return new_base;
+}
+
+void create_gc_ae_base(ae_base *const base, const size_t *const data_size)
+{
+    base->max_quant = AETHER_BASE_ADD_SIZE;
+    base->memory = calloc(base->max_quant, *data_size);
+
+    if (base->memory == NULL)
+        return;
+
+#ifdef DEBUG_AE
+    printf("Allocated memory at address %p\n", base->memory);
+#endif
+
+    base->quant = 0;
+
+    return;
 }
 
 uint8_t create_ae_base(ae_base *const base, const size_t *const data_size, size_t new_size)
@@ -100,6 +119,8 @@ uint8_t create_ae_base(ae_base *const base, const size_t *const data_size, size_
 #endif
 
     base->quant = 0;
+
+    base->gc_idx = append_ae_gc(base->memory);
 
     return 0;
 }
@@ -121,6 +142,8 @@ uint8_t create_max_size_ae_base(ae_base *const base, const size_t *const data_si
 
     base->quant = base->max_quant;
 
+    base->gc_idx = append_ae_gc(base->memory);
+
     return 0;
 }
 
@@ -134,6 +157,7 @@ uint8_t free_ae_base(ae_base *const base)
     free(base->memory);
     base->quant = 0;
     base->max_quant = 0;
+    remove_ae_gc(base->gc_idx);
 
     return 0;
 }
@@ -465,6 +489,9 @@ uint8_t swap_ae_base(ae_base *const base, const size_t *const data_size, size_t 
 
 uint8_t optimize_ae_base(ae_base *const base, const size_t *const data_size)
 {
+    if (base->memory == NULL)
+        return 1;
+
     if (base->quant == 0)
         return 0;
 
@@ -480,6 +507,8 @@ uint8_t optimize_ae_base(ae_base *const base, const size_t *const data_size)
     base->memory = p;
 
     base->max_quant = base->quant;
+
+    update_ae_gc(base->gc_idx, base->memory);
 
     return 0;
 }

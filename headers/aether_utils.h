@@ -12,4 +12,6 @@
 
 #define max_ae(x, y) ((x) > (y) ? (x) : (y));
 
+#define diap_ae(x, from, to) ((x) > (to) ? (to) : ((x) < (from) ? (from) : (x)))
+
 #endif //__AETHER_UTILS__

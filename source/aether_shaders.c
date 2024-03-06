@@ -5,25 +5,34 @@
 #include <math.h>
 #include <float.h>
 
-static void ShadowBufferShader_vertex(ae_model const *model, const int32_t face_i);
+static bool ShadowBufferShader_vertex(ae_model const *model, const int32_t face_i);
 static void ShadowBufferShader_fragment(ae_model const *model, ae_vec3_f const *bar, ae_tga_c *color);
 
-static void Shader_vertex(ae_model const *model, const int32_t face_i);
+static bool Shader_vertex(ae_model const *model, const int32_t face_i);
 static void Shader_fragment(ae_model const *model, ae_vec3_f const *bar, ae_tga_c *color);
 
 ae_shader ShadowBufferShader = {.vertex = &ShadowBufferShader_vertex, .fragment = &ShadowBufferShader_fragment};
 ae_shader Shader = {.vertex = &Shader_vertex, .fragment = &Shader_fragment};
 
-static void ShadowBufferShader_vertex(ae_model const *model, const int32_t face_i)
+static bool ShadowBufferShader_vertex(ae_model const *model, const int32_t face_i)
 {
+    uint8_t visible_vertex = 0;
     ae_face face[3];
     face_ae_model(model, face_i, face);
     for (size_t j = 0; j < 3; j++)
     {
-        vert_ae_model(model, face[j].v_i, &ShadowBufferShader.p[j]);
-        AE_M_x_V_I_EMBED_RENDER(ShadowBufferShader.p[j], Z, ShadowBufferShader.p[j]);
+        vert_ae_model(model, face[j].v_i, &ShadowBufferShader.orig_p[j]);
+        AE_M_x_V_F_EMBED_GET_COEFF_RENDER(ShadowBufferShader.orig_p[j], Proj_ModelView, ShadowBufferShader.orig_p[j], ShadowBufferShader.coeff_p[j]);
+        AE_M_x_V_I_EMBED_RENDER(ShadowBufferShader.p[j], ViewPort, ShadowBufferShader.orig_p[j]);
+        normal_ae_model(model, face[j].norm_i, &ShadowBufferShader.normals[j]);
+        AE_M_x_V_F_PROJ_RENDER(ShadowBufferShader.normals[j], Proj_ModelView_IT, ShadowBufferShader.normals[j], 0.0);
+        if (ShadowBufferShader.normals[j].z > 0.0)
+            visible_vertex += 1;
     }
-    return;
+    if (visible_vertex > 0)
+        return true;
+    else
+        return false;
 }
 
 static void ShadowBufferShader_fragment(ae_model const *model, ae_vec3_f const *bar, ae_tga_c *color)
@@ -36,20 +45,26 @@ static void ShadowBufferShader_fragment(ae_model const *model, ae_vec3_f const *
     return;
 }
 
-static void Shader_vertex(ae_model const *model, const int32_t face_i)
+static bool Shader_vertex(ae_model const *model, const int32_t face_i)
 {
+    uint8_t visible_vertex = 0;
     ae_face face[3];
     face_ae_model(model, face_i, face);
     for (size_t j = 0; j < 3; j++)
     {
         vert_ae_model(model, face[j].v_i, &Shader.orig_p[j]);
-        AE_M_x_V_F_EMBED_RENDER(Shader.orig_p[j], Proj_ModelView, Shader.orig_p[j]);
+        AE_M_x_V_F_EMBED_GET_COEFF_RENDER(Shader.orig_p[j], Proj_ModelView, Shader.orig_p[j], Shader.coeff_p[j]);
         AE_M_x_V_I_EMBED_RENDER(Shader.p[j], ViewPort, Shader.orig_p[j]);
         uv_ae_model(model, face[j].uv_i, &Shader.uvs[j]);
         normal_ae_model(model, face[j].norm_i, &Shader.normals[j]);
         AE_M_x_V_F_PROJ_RENDER(Shader.normals[j], Proj_ModelView_IT, Shader.normals[j], 0.0);
+        if (Shader.normals[j].z > 0.0)
+            visible_vertex += 1;
     }
-    return;
+    if (visible_vertex > 0)
+        return true;
+    else
+        return false;
 }
 
 static void Shader_fragment(ae_model const *model, ae_vec3_f const *bar, ae_tga_c *color)
@@ -58,10 +73,7 @@ static void Shader_fragment(ae_model const *model, ae_vec3_f const *bar, ae_tga_
     ae_vec2_f uv = {.u = bar->raw[0] * Shader.uvs[0].u + bar->raw[1] * Shader.uvs[1].u + bar->raw[2] * Shader.uvs[2].u,
                     .v = bar->raw[0] * Shader.uvs[0].v + bar->raw[1] * Shader.uvs[1].v + bar->raw[2] * Shader.uvs[2].v};
 
-    // Calculate normal maps in the tangent space and coeff
-    ae_vec3_f bn = {.x = bar->raw[0] * Shader.normals[0].x + bar->raw[1] * Shader.normals[1].x + bar->raw[2] * Shader.normals[2].x,
-                    .y = bar->raw[0] * Shader.normals[0].y + bar->raw[1] * Shader.normals[1].y + bar->raw[2] * Shader.normals[2].y,
-                    .z = bar->raw[0] * Shader.normals[0].z + bar->raw[1] * Shader.normals[1].z + bar->raw[2] * Shader.normals[2].z};
+
 
     ae_vec3_f normal;
     switch (model->nm_type)
@@ -76,6 +88,10 @@ static void Shader_fragment(ae_model const *model, ae_vec3_f const *bar, ae_tga_
     break;
     case AE_NM_TANGENT:
     {
+        // Calculate normal maps in the tangent space and coeff
+        ae_vec3_f bn = {.x = bar->raw[0] * Shader.normals[0].x + bar->raw[1] * Shader.normals[1].x + bar->raw[2] * Shader.normals[2].x,
+                        .y = bar->raw[0] * Shader.normals[0].y + bar->raw[1] * Shader.normals[1].y + bar->raw[2] * Shader.normals[2].y,
+                        .z = bar->raw[0] * Shader.normals[0].z + bar->raw[1] * Shader.normals[1].z + bar->raw[2] * Shader.normals[2].z};
         AE_VEC3_NORMALIZE(bn, bn, 1);
 
         AE_MATRIX_F_CREATE(Am, 3, 3);
@@ -133,13 +149,17 @@ static void Shader_fragment(ae_model const *model, ae_vec3_f const *bar, ae_tga_
     *color = texture_ae_model(model, &uv);
 
     // Calc shadow
-    ae_vec3_f sb_p = {.x = bar->raw[0] * Shader.p[0].x + bar->raw[1] * Shader.p[1].x + bar->raw[2] * Shader.p[2].x,
-                      .y = bar->raw[0] * Shader.p[0].y + bar->raw[1] * Shader.p[1].y + bar->raw[2] * Shader.p[2].y,
-                      .z = bar->raw[0] * Shader.p[0].z + bar->raw[1] * Shader.p[1].z + bar->raw[2] * Shader.p[2].z};
-    AE_M_x_V_F_EMBED_RENDER(sb_p, Shadow, sb_p);
-    int32_t idx = (int32_t)sb_p.raw[0] + (int32_t)sb_p.raw[1] * width;
-    double shadow = 0.3 + 0.7 * (shadow_buffer[idx] < sb_p.raw[2] + 43.34);
-
+    double shadow = 1.0;
+    if (shadows_on == true)
+    {
+        ae_vec3_f sb_p = {.x = bar->raw[0] * Shader.p[0].x + bar->raw[1] * Shader.p[1].x + bar->raw[2] * Shader.p[2].x,
+                          .y = bar->raw[0] * Shader.p[0].y + bar->raw[1] * Shader.p[1].y + bar->raw[2] * Shader.p[2].y,
+                          .z = bar->raw[0] * Shader.p[0].z + bar->raw[1] * Shader.p[1].z + bar->raw[2] * Shader.p[2].z};
+        AE_M_x_V_F_EMBED_RENDER(sb_p, Shadow, sb_p);
+        int32_t idx = (int32_t)sb_p.raw[0] + (int32_t)sb_p.raw[1] * width;
+        if (idx >= 0 && idx < height * width)
+            shadow = 0.3 + 0.5 * (shadow_buffer[idx] < sb_p.raw[2] + 77.77);
+    }
     // Calc sum of coeffs
     double intensity = (1.2 * diff + 0.5 * spec) * shadow;
     AE_TGA_SET_P_RGBA(

@@ -23,11 +23,29 @@ extern ae_vec3_f up;
 extern double eye_center_dif;
 extern double *shadow_buffer;
 
+extern bool shadows_on;
+
 extern int32_t width;
 extern int32_t height;
 extern int32_t depth;
 
 #define PI 3.14159265
+
+#define AE_M_x_V_F_EMBED_GET_COEFF_RENDER(result, m, v, coeff)                                                                                                                               \
+    {                                                                                                                                                                       \
+        ae_vec3_f temp = {.x = v.x, .y = v.y, .z = v.z};                                                                                                                    \
+        coeff = (AE_MATRIX_F_GET(m, 3, 0) * temp.x + AE_MATRIX_F_GET(m, 3, 1) * temp.y + AE_MATRIX_F_GET(m, 3, 2) * temp.z + AE_MATRIX_F_GET(m, 3, 3));              \
+        for (size_t i = 0; i < 3; i++)                                                                                                                                      \
+            result.raw[i] = (AE_MATRIX_F_GET(m, i, 0) * temp.x + AE_MATRIX_F_GET(m, i, 1) * temp.y + AE_MATRIX_F_GET(m, i, 2) * temp.z + AE_MATRIX_F_GET(m, i, 3)) / coeff; \
+    }
+
+#define AE_M_x_V_I_EMBED_GET_COEFF_RENDER(result, m, v, coeff)                                                                                                                                          \
+    {                                                                                                                                                                                  \
+        ae_vec3_f temp = {.x = v.x, .y = v.y, .z = v.z};                                                                                                                               \
+        coeff = (AE_MATRIX_F_GET(m, 3, 0) * temp.x + AE_MATRIX_F_GET(m, 3, 1) * temp.y + AE_MATRIX_F_GET(m, 3, 2) * temp.z + AE_MATRIX_F_GET(m, 3, 3));                         \
+        for (size_t i = 0; i < 3; i++)                                                                                                                                                 \
+            result.raw[i] = (int32_t)((AE_MATRIX_F_GET(m, i, 0) * temp.x + AE_MATRIX_F_GET(m, i, 1) * temp.y + AE_MATRIX_F_GET(m, i, 2) * temp.z + AE_MATRIX_F_GET(m, i, 3)) / coeff); \
+    }
 
 #define AE_M_x_V_F_EMBED_RENDER(result, m, v)                                                                                                                               \
     {                                                                                                                                                                       \

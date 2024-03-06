@@ -19,21 +19,23 @@ AE_MATRIX_F_CREATE(Shadow, 4, 4);
 
 ae_vec3_f light_dir = {.x = 1.0, .y = 1.0, .z = 1.0};
 ae_vec3_f l = {.x = 1.0, .y = 1.0, .z = 1.0};
-ae_vec3_f eye = {.x = -1.0, .y = 1.0, .z = 3.0};
+ae_vec3_f eye = {.x = -1.0, .y = 0.1, .z = 5.0};
 ae_vec3_f center = {.x = 0.0, .y = 0.0, .z = 0.0};
 ae_vec3_f up = {.x = 0.0, .y = 1.0, .z = 0.0};
 
 double eye_center_dif;
 double *shadow_buffer;
 
-int32_t width = 2000;
-int32_t height = 2000;
+bool shadows_on = true;
+
+int32_t width = 800;
+int32_t height = 800;
 int32_t depth = 2000;
 
 void render_model(ae_vector const *models)
 {
-
     ae_tga_i image = create_ae_tga(width, height, RGBA);
+    ae_model model;
     // double X_deg = 0.0;
     // double Y_deg = 0.0;
     // double Z_deg = 0.0;
@@ -59,23 +61,24 @@ void render_model(ae_vector const *models)
     line_ae_render(o, x, &image, &red);
     line_ae_render(o, y, &image, &green);
 
-    AE_LOOK_AT_RENDER(ModelView, light_dir, center, up);
-    AE_PROJECTION_RENDER(Projection, 0.0);
-    AE_MATRIX_F_MULT(Proj_ModelView, Projection, ModelView, 4, 4);
-    AE_MATRIX_F_MULT(Z, ViewPort, Proj_ModelView, 4, 4);
-
-    ae_model model;
-    for (size_t m = 0; m < models->data.quant; m++)
+    if (shadows_on == true)
     {
-        get_ae_vector(models, m, &model);
-        for (size_t i = 0; i < n_faces_ae_model(&model); i++)
+        AE_LOOK_AT_RENDER(ModelView, light_dir, center, up);
+        AE_PROJECTION_RENDER(Projection, 0.0);
+        AE_MATRIX_F_MULT(Proj_ModelView, Projection, ModelView, 4, 4);
+        AE_MATRIX_F_INVERSE_TRANSPOSE(Proj_ModelView_IT, Proj_ModelView, 4, 4);
+        AE_MATRIX_F_MULT(Z, ViewPort, Proj_ModelView, 4, 4);
+        for (size_t m = 0; m < models->data.quant; m++)
         {
-            ShadowBufferShader.vertex(&model, i);
-            shadow_buffer_ae_render(&image, &model, &ShadowBufferShader, shadow_buffer);
+            get_ae_vector(models, m, &model);
+            for (size_t i = 0; i < n_faces_ae_model(&model); i++)
+            {
+                if (ShadowBufferShader.vertex(&model, i))
+                    shadow_buffer_ae_render(&image, &model, &ShadowBufferShader, shadow_buffer);
+            }
         }
+        Z_shdw = Z;
     }
-    Z_shdw = Z;
-
     AE_LOOK_AT_RENDER(ModelView, eye, center, up);
     AE_PROJECTION_RENDER(Projection, eye_center_dif);
     AE_MATRIX_F_MULT(Proj_ModelView, Projection, ModelView, 4, 4);
@@ -83,15 +86,16 @@ void render_model(ae_vector const *models)
     AE_MATRIX_F_MULT(Z, ViewPort, Proj_ModelView, 4, 4);
     AE_M_x_V_F_PROJ_RENDER(l, Proj_ModelView, light_dir, 0.0);
     AE_VEC3_NORMALIZE(l, l, 1);
-    AE_SHADOW_M_RENDER(Shadow);
+    if (shadows_on)
+        AE_SHADOW_M_RENDER(Shadow);
 
     for (size_t m = 0; m < models->data.quant; m++)
     {
         get_ae_vector(models, m, &model);
         for (size_t i = 0; i < n_faces_ae_model(&model); i++)
         {
-            Shader.vertex(&model, i);
-            triangle_ae_render(&image, &model, &Shader, zbuffer);
+            if (Shader.vertex(&model, i))
+                triangle_ae_render(&image, &model, &Shader, zbuffer);
         }
     }
 

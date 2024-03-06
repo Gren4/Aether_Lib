@@ -9,6 +9,8 @@ typedef struct ae_vector
     size_t data_size;
 } ae_vector;
 
+void create_gc_ae_vector(ae_vector *gc, size_t data_size);
+
 ae_vector create_ae_vector(size_t data_size, size_t quant);
 
 uint8_t free_ae_vector(ae_vector *const vector);

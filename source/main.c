@@ -4,14 +4,14 @@
 
 #include <stdio.h>
 #include <string.h>
-
+/*
 int main(void)
 {
     clock_t tic, toc;
     ae_vector models = create_ae_vector(sizeof(ae_model), 0);
     tic = clock();
     ae_model model;
-    
+
     model = open_ae_model(
         "models\\african_head.obj",
         "models\\african_head_diffuse.tga",
@@ -21,17 +21,17 @@ int main(void)
 
     append_ae_vector(&models, &model);
 
-/*
+
     model = open_ae_model(
-        "models\\african_head_eye_outer.obj",
-        "models\\african_head_eye_outer_diffuse.tga",
-        AE_NM_GLOBAL,
-        "models\\african_head_eye_outer_nm.tga",
-        "models\\african_head_eye_outer_spec.tga");
+        "models\\floor.obj",
+        "models\\floor_diffuse.tga",
+        AE_NM_TANGENT,
+        "models\\floor_nm_tangent.tga",
+        NULL);
 
     append_ae_vector(&models, &model);
-*/
-    
+
+
     model = open_ae_model(
         "models\\african_head_eye_inner.obj",
         "models\\african_head_eye_inner_diffuse.tga",
@@ -57,3 +57,4 @@ int main(void)
 
     return 0;
 }
+*/

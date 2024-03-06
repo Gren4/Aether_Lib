@@ -15,9 +15,12 @@ typedef enum
 typedef struct ae_base
 {
     void *memory;
+    size_t gc_idx;
     size_t quant;
     size_t max_quant;
 } ae_base;
+
+void create_gc_ae_base(ae_base *const base, const size_t *const data_size);
 
 uint8_t check_realloc_ae_base(ae_base *const base, const size_t *const data_size, size_t new_size, AE_BASE_MEM type);
 

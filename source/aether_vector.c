@@ -1,6 +1,16 @@
 #include "aether_vector.h"
 #include <string.h>
 
+void create_gc_ae_vector(ae_vector *gc, size_t data_size)
+{
+    gc->data = init_ae_base();
+    gc->data_size = data_size;
+
+    create_ae_base(&gc->data, &gc->data_size, 0);
+
+    return;
+}
+
 ae_vector create_ae_vector(size_t data_size, size_t quant)
 {
     ae_vector new_vector = {

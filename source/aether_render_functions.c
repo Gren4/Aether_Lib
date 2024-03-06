@@ -74,45 +74,6 @@ ae_vec3_f barycentric_ae_render(ae_vec3_f const *A, ae_vec3_f *P)
     return ret;
 }
 
-#define AE_TRIANGLE_RENDER_CYCLE(n1, n2)                                                                                         \
-    {                                                                                                                            \
-        if (point##n2.y >= 0)                                                                                                    \
-            for (size_t i = (point##n1.y >= 0 ? point##n1.y : 0); i <= ((point##n2.y < height) ? point##n2.y : height - 1); i++) \
-            {                                                                                                                    \
-                alpha = (double)(i - point0.y) / total_height;                                                                   \
-                beta = (double)(i - point##n1.y) / segment_height;                                                               \
-                                                                                                                                 \
-                P.y = i;                                                                                                         \
-                                                                                                                                 \
-                A = point0.x + (point2.x - point0.x) * alpha;                                                                    \
-                B = point##n1.x + (point##n2.x - point##n1.x) * beta;                                                            \
-                                                                                                                                 \
-                if (A > B)                                                                                                       \
-                {                                                                                                                \
-                    swap_ae(double, A, B);                                                                                       \
-                }                                                                                                                \
-                if (B >= 0)                                                                                                      \
-                {                                                                                                                \
-                    for (size_t j = (int32_t)A >= 0 ? (int32_t)A : 0; j <= (((int32_t)B < width) ? (int32_t)B : width - 1); j++) \
-                    {                                                                                                            \
-                        P.x = j;                                                                                                 \
-                        bc_screen = barycentric_ae_render(shader->p, &P);                                                        \
-                        zbuffer_idx = (int32_t)P.x + (int32_t)P.y * width;                                                       \
-                        if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0)                                               \
-                            continue;                                                                                            \
-                        if (zbuffer_idx < width * height && zbuffer[zbuffer_idx] < P.z)                                          \
-                        {                                                                                                        \
-                            shader->fragment(model, &bc_screen, &new_color);                                                     \
-                                                                                                                                 \
-                            set_ae_tga(image, (int32_t)P.x, (int32_t)P.y, &new_color);                                           \
-                                                                                                                                 \
-                            zbuffer[zbuffer_idx] = P.z;                                                                          \
-                        }                                                                                                        \
-                    }                                                                                                            \
-                }                                                                                                                \
-            }                                                                                                                    \
-    }
-
 void triangle_ae_render(ae_tga_i *image, ae_model const *model, ae_shader const *shader, double *zbuffer)
 {
     AE_VEC2_I_CREATE_FROM(point0, shader->p[0]);
@@ -138,22 +99,15 @@ void triangle_ae_render(ae_tga_i *image, ae_model const *model, ae_shader const 
     ae_vec3_f P;
     int32_t total_height = (point2.y - point0.y) == 0 ? 1 : (point2.y - point0.y);
     int32_t segment_height = (point1.y - point0.y) == 0 ? 1 : (point1.y - point0.y);
-    double alpha;
-    double beta;
-    double A;
-    double B;
-    ae_tga_c new_color;
-    int32_t zbuffer_idx;
-    ae_vec3_f bc_screen;
 
     if (point1.y >= 0)
         for (size_t i = (point0.y >= 0 ? point0.y : 0); i <= ((point1.y < height) ? point1.y : height - 1); i++)
         {
-            alpha = (double)(i - point0.y) / total_height;
-            beta = (double)(i - point0.y) / segment_height;
+            double alpha = (double)(i - point0.y) / total_height;
+            double beta = (double)(i - point0.y) / segment_height;
             P.y = i;
-            A = point0.x + (point2.x - point0.x) * alpha;
-            B = point0.x + (point1.x - point0.x) * beta;
+            double A = point0.x + (point2.x - point0.x) * alpha;
+            double B = point0.x + (point1.x - point0.x) * beta;
             if (A > B)
             {
                 swap_ae(double, A, B);
@@ -163,13 +117,19 @@ void triangle_ae_render(ae_tga_i *image, ae_model const *model, ae_shader const 
                 for (size_t j = (int32_t)A >= 0 ? (int32_t)A : 0; j <= (((int32_t)B < width) ? (int32_t)B : width - 1); j++)
                 {
                     P.x = j;
-                    bc_screen = barycentric_ae_render(shader->p, &P);
-                    zbuffer_idx = (int32_t)P.x + (int32_t)P.y * width;
+                    ae_vec3_f bc_screen = barycentric_ae_render(shader->p, &P);
                     if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0)
                         continue;
+                    int32_t zbuffer_idx = (int32_t)P.x + (int32_t)P.y * width;
+                    ae_vec3_f bc_clip = {.x = bc_screen.x / shader->coeff_p[0],
+                                         .y = bc_screen.y / shader->coeff_p[1],
+                                         .z = bc_screen.z / shader->coeff_p[2]};
+                    double clip_coeff = 1.0 / (bc_clip.x + bc_clip.y + bc_clip.z);
+                    AE_VEC3_F_MULT(bc_clip, bc_clip, clip_coeff);
                     if (zbuffer_idx < width * height && zbuffer[zbuffer_idx] < P.z)
                     {
-                        shader->fragment(model, &bc_screen, &new_color);
+                        ae_tga_c new_color;
+                        shader->fragment(model, &bc_clip, &new_color);
                         set_ae_tga(image, (int32_t)P.x, (int32_t)P.y, &new_color);
                         zbuffer[zbuffer_idx] = P.z;
                     }
@@ -182,11 +142,11 @@ void triangle_ae_render(ae_tga_i *image, ae_model const *model, ae_shader const 
     if (point2.y >= 0)
         for (size_t i = (point1.y >= 0 ? point1.y : 0); i <= ((point2.y < height) ? point2.y : height - 1); i++)
         {
-            alpha = (double)(i - point0.y) / total_height;
-            beta = (double)(i - point1.y) / segment_height;
+            double alpha = (double)(i - point0.y) / total_height;
+            double beta = (double)(i - point1.y) / segment_height;
             P.y = i;
-            A = point0.x + (point2.x - point0.x) * alpha;
-            B = point1.x + (point2.x - point1.x) * beta;
+            double A = point0.x + (point2.x - point0.x) * alpha;
+            double B = point1.x + (point2.x - point1.x) * beta;
             if (A > B)
             {
                 swap_ae(double, A, B);
@@ -196,13 +156,19 @@ void triangle_ae_render(ae_tga_i *image, ae_model const *model, ae_shader const 
                 for (size_t j = (int32_t)A >= 0 ? (int32_t)A : 0; j <= (((int32_t)B < width) ? (int32_t)B : width - 1); j++)
                 {
                     P.x = j;
-                    bc_screen = barycentric_ae_render(shader->p, &P);
-                    zbuffer_idx = (int32_t)P.x + (int32_t)P.y * width;
+                    ae_vec3_f bc_screen = barycentric_ae_render(shader->p, &P);
                     if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0)
                         continue;
+                    int32_t zbuffer_idx = (int32_t)P.x + (int32_t)P.y * width;
+                    ae_vec3_f bc_clip = {.x = bc_screen.x / shader->coeff_p[0],
+                                         .y = bc_screen.y / shader->coeff_p[1],
+                                         .z = bc_screen.z / shader->coeff_p[2]};
+                    double clip_coeff = 1.0 / (bc_clip.x + bc_clip.y + bc_clip.z);
+                    AE_VEC3_F_MULT(bc_clip, bc_clip, clip_coeff);
                     if (zbuffer_idx < width * height && zbuffer[zbuffer_idx] < P.z)
                     {
-                        shader->fragment(model, &bc_screen, &new_color);
+                        ae_tga_c new_color;
+                        shader->fragment(model, &bc_clip, &new_color);
                         set_ae_tga(image, (int32_t)P.x, (int32_t)P.y, &new_color);
                         zbuffer[zbuffer_idx] = P.z;
                     }
@@ -263,9 +229,14 @@ void shadow_buffer_ae_render(ae_tga_i *image, ae_model const *model, ae_shader c
                 {
                     P.x = j;
                     bc_screen = barycentric_ae_render(shader->p, &P);
-                    zbuffer_idx = (int32_t)P.x + (int32_t)P.y * width;
                     if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0)
                         continue;
+                    zbuffer_idx = (int32_t)P.x + (int32_t)P.y * width;
+                    ae_vec3_f bc_clip = {.x = bc_screen.x / shader->coeff_p[0],
+                                         .y = bc_screen.y / shader->coeff_p[1],
+                                         .z = bc_screen.z / shader->coeff_p[2]};
+                    double clip_coeff = 1.0 / (bc_clip.x + bc_clip.y + bc_clip.z);
+                    AE_VEC3_F_MULT(bc_clip, bc_clip, clip_coeff);
                     if (zbuffer_idx < width * height && zbuffer[zbuffer_idx] < P.z)
                     {
                         zbuffer[zbuffer_idx] = P.z;
@@ -294,9 +265,14 @@ void shadow_buffer_ae_render(ae_tga_i *image, ae_model const *model, ae_shader c
                 {
                     P.x = j;
                     bc_screen = barycentric_ae_render(shader->p, &P);
-                    zbuffer_idx = (int32_t)P.x + (int32_t)P.y * width;
                     if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0)
                         continue;
+                    zbuffer_idx = (int32_t)P.x + (int32_t)P.y * width;
+                    ae_vec3_f bc_clip = {.x = bc_screen.x / shader->coeff_p[0],
+                                         .y = bc_screen.y / shader->coeff_p[1],
+                                         .z = bc_screen.z / shader->coeff_p[2]};
+                    double clip_coeff = 1.0 / (bc_clip.x + bc_clip.y + bc_clip.z);
+                    AE_VEC3_F_MULT(bc_clip, bc_clip, clip_coeff);
                     if (zbuffer_idx < width * height && zbuffer[zbuffer_idx] < P.z)
                     {
                         zbuffer[zbuffer_idx] = P.z;
