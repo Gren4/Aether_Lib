@@ -1,6 +1,7 @@
 // based on https://github.com/ssloy/tinyrenderer/wiki
 #include "aether_render.h"
 #include "aether_render_gv.h"
+#include <stdlib.h>
 #include <math.h>
 #include <float.h>
 
@@ -70,7 +71,7 @@ void render_model(ae_vector const *models)
         AE_MATRIX_F_MULT(Z, ViewPort, Proj_ModelView, 4, 4);
         for (size_t m = 0; m < models->data.quant; m++)
         {
-            get_ae_vector(models, m, &model);
+            model = *(ae_model*)get_ae_vector(models, m);
             for (size_t i = 0; i < n_faces_ae_model(&model); i++)
             {
                 if (ShadowBufferShader.vertex(&model, i))
@@ -91,7 +92,7 @@ void render_model(ae_vector const *models)
 
     for (size_t m = 0; m < models->data.quant; m++)
     {
-        get_ae_vector(models, m, &model);
+        model = *(ae_model*)get_ae_vector(models, m);
         for (size_t i = 0; i < n_faces_ae_model(&model); i++)
         {
             if (Shader.vertex(&model, i))

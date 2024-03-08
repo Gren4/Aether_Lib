@@ -4,9 +4,12 @@
 
 #include <stdio.h>
 #include <string.h>
-/*
+
+//#define a
+#ifdef a
 int main(void)
 {
+    init_ae_gc();
     clock_t tic, toc;
     ae_vector models = create_ae_vector(sizeof(ae_model), 0);
     tic = clock();
@@ -19,7 +22,7 @@ int main(void)
         "models\\african_head_nm_tangent.tga",
         "models\\african_head_spec.tga");
 
-    append_ae_vector(&models, &model);
+    *(ae_model*)append_ae_vector(&models) = model;
 
 
     model = open_ae_model(
@@ -29,7 +32,7 @@ int main(void)
         "models\\floor_nm_tangent.tga",
         NULL);
 
-    append_ae_vector(&models, &model);
+    *(ae_model*)append_ae_vector(&models) = model;
 
 
     model = open_ae_model(
@@ -39,7 +42,8 @@ int main(void)
         "models\\african_head_eye_inner_nm.tga",
         "models\\african_head_eye_inner_spec.tga");
 
-    append_ae_vector(&models, &model);
+    *(ae_model*)append_ae_vector(&models) = model;
+
     toc = clock();
     printf("Open model execution time: %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);
 
@@ -47,14 +51,7 @@ int main(void)
     render_model(&models);
     toc = clock();
     printf("Render execution time: %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);
-
-    for (size_t m = 0; m < models.data.quant; m++)
-    {
-        get_ae_vector(&models, m, &model);
-        close_ae_model(&model);
-    }
-    free_ae_vector(&models);
-
+    on_return_ae_gc();
     return 0;
 }
-*/
+#endif

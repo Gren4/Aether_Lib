@@ -63,7 +63,7 @@ ae_model open_ae_model(const char *m_filename, const char *t_filename, const ae_
         {
             ae_vec3_f v;
             fscanf(in, "%lf %lf %lf\n", &v.x, &v.y, &v.z);
-            append_ae_vector(&new_model.verts, &v);
+            *(ae_vec3_f*)append_ae_vector(&new_model.verts) = v;
         }
         break;
 
@@ -72,7 +72,7 @@ ae_model open_ae_model(const char *m_filename, const char *t_filename, const ae_
             ae_vec2_f uv;
             double temp;
             fscanf(in, "  %lf %lf %lf\n", &uv.u, &uv.v, &temp);
-            append_ae_vector(&new_model.uvs, &uv);
+            *(ae_vec2_f*)append_ae_vector(&new_model.uvs) = uv;
         }
         break;
 
@@ -80,7 +80,7 @@ ae_model open_ae_model(const char *m_filename, const char *t_filename, const ae_
         {
             ae_vec3_f vn;
             fscanf(in, "  %lf %lf %lf\n", &vn.x, &vn.y, &vn.z);
-            append_ae_vector(&new_model.normals, &vn);
+            *(ae_vec3_f*)append_ae_vector(&new_model.normals) = vn;
         }
         break;
 
@@ -94,7 +94,7 @@ ae_model open_ae_model(const char *m_filename, const char *t_filename, const ae_
                 faces[i].uv_i -= 1;
                 faces[i].norm_i -= 1;
             }
-            append_ae_vector(&new_model.faces, &faces);
+            memcpy(append_ae_vector(&new_model.faces), faces, sizeof(ae_face) * 3);
         }
         break;
 
@@ -136,28 +136,24 @@ size_t n_faces_ae_model(ae_model const *model)
     return model->faces.data.quant;
 }
 
-void vert_ae_model(ae_model const *model, const size_t i, ae_vec3_f *vert)
+ae_vec3_f vert_ae_model(ae_model const *model, const size_t i)
 {
-    get_ae_vector(&model->verts, i, vert);
-    return;
+    return *(ae_vec3_f*)get_ae_vector(&model->verts, i);
 }
 
-void face_ae_model(ae_model const *model, const size_t i, ae_face *face)
+void* face_ae_model(ae_model const *model, const size_t i)
 {
-    get_ae_vector(&model->faces, i, face);
-    return;
+    return get_ae_vector(&model->faces, i);
 }
 
-void uv_ae_model(ae_model const *model, const size_t i, ae_vec2_f *uv)
+ae_vec2_f uv_ae_model(ae_model const *model, const size_t i)
 {
-    get_ae_vector(&model->uvs, i, uv);
-    return;
+    return *(ae_vec2_f*)get_ae_vector(&model->uvs, i);
 }
 
-void normal_ae_model(ae_model const *model, const size_t i, ae_vec3_f *norm)
+ae_vec3_f normal_ae_model(ae_model const *model, const size_t i)
 {
-    get_ae_vector(&model->normals, i, norm);
-    return;
+    return *(ae_vec3_f*)get_ae_vector(&model->normals, i);
 }
 
 ae_tga_c texture_ae_model(ae_model const *model, ae_vec2_f const *uv)

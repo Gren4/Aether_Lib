@@ -3,6 +3,11 @@
 
 #include "aether_base.h"
 
+#define INIT_AE_DEQUE                                                                                                                  \
+    {                                                                                                                                  \
+        .pointers = INIT_AE_BASE, .blocks = INIT_AE_BASE, .front_i = 0, .back_i = 0, .front_block = 0, .back_block = 0, .data_size = 0 \
+    }
+
 typedef struct
 {
     ae_base pointers;

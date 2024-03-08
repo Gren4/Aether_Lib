@@ -18,13 +18,13 @@ static bool ShadowBufferShader_vertex(ae_model const *model, const int32_t face_
 {
     uint8_t visible_vertex = 0;
     ae_face face[3];
-    face_ae_model(model, face_i, face);
+    memcpy(face, face_ae_model(model, face_i), sizeof(face));
     for (size_t j = 0; j < 3; j++)
     {
-        vert_ae_model(model, face[j].v_i, &ShadowBufferShader.orig_p[j]);
+        ShadowBufferShader.orig_p[j] = vert_ae_model(model, face[j].v_i);
         AE_M_x_V_F_EMBED_GET_COEFF_RENDER(ShadowBufferShader.orig_p[j], Proj_ModelView, ShadowBufferShader.orig_p[j], ShadowBufferShader.coeff_p[j]);
         AE_M_x_V_I_EMBED_RENDER(ShadowBufferShader.p[j], ViewPort, ShadowBufferShader.orig_p[j]);
-        normal_ae_model(model, face[j].norm_i, &ShadowBufferShader.normals[j]);
+        ShadowBufferShader.normals[j] = normal_ae_model(model, face[j].norm_i);
         AE_M_x_V_F_PROJ_RENDER(ShadowBufferShader.normals[j], Proj_ModelView_IT, ShadowBufferShader.normals[j], 0.0);
         if (ShadowBufferShader.normals[j].z > 0.0)
             visible_vertex += 1;
@@ -49,14 +49,14 @@ static bool Shader_vertex(ae_model const *model, const int32_t face_i)
 {
     uint8_t visible_vertex = 0;
     ae_face face[3];
-    face_ae_model(model, face_i, face);
+    memcpy(face, face_ae_model(model, face_i), sizeof(face));
     for (size_t j = 0; j < 3; j++)
     {
-        vert_ae_model(model, face[j].v_i, &Shader.orig_p[j]);
+        Shader.orig_p[j] = vert_ae_model(model, face[j].v_i);
         AE_M_x_V_F_EMBED_GET_COEFF_RENDER(Shader.orig_p[j], Proj_ModelView, Shader.orig_p[j], Shader.coeff_p[j]);
         AE_M_x_V_I_EMBED_RENDER(Shader.p[j], ViewPort, Shader.orig_p[j]);
-        uv_ae_model(model, face[j].uv_i, &Shader.uvs[j]);
-        normal_ae_model(model, face[j].norm_i, &Shader.normals[j]);
+        Shader.uvs[j] = uv_ae_model(model, face[j].uv_i);
+        Shader.normals[j] = normal_ae_model(model, face[j].norm_i);
         AE_M_x_V_F_PROJ_RENDER(Shader.normals[j], Proj_ModelView_IT, Shader.normals[j], 0.0);
         if (Shader.normals[j].z > 0.0)
             visible_vertex += 1;

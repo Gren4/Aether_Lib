@@ -3,6 +3,11 @@
 
 #include "aether_base.h"
 
+#define INIT_AE_VECTOR                       \
+    {                                        \
+        .data = INIT_AE_BASE, .data_size = 0 \
+    }
+
 typedef struct ae_vector
 {
     ae_base data;
@@ -13,46 +18,50 @@ void create_gc_ae_vector(ae_vector *gc, size_t data_size);
 
 ae_vector create_ae_vector(size_t data_size, size_t quant);
 
-uint8_t free_ae_vector(ae_vector *const vector);
+size_t gc_idx_ae_vector(ae_vector *const vector);
 
-uint8_t resize_ae_vector(ae_vector *const vector, size_t new_size);
+size_t quant_ae_vector(ae_vector *const vector);
 
-uint8_t append_ae_vector(ae_vector *const vector, void *par);
+size_t max_quant_ae_vector(ae_vector *const vector);
 
-uint8_t append_vector_ae_vector(ae_vector *const vector_to, ae_vector *const vector_from, size_t i, size_t n);
+size_t data_size_ae_vector(ae_vector *const vector);
 
-uint8_t set_ae_vector(ae_vector *const vector, size_t i, void *par);
+void free_ae_vector(ae_vector *const vector);
 
-uint8_t set_vector_ae_vector(ae_vector *const vector_to, ae_vector *const vector_from, size_t i_to, size_t i_from, size_t n);
+void resize_ae_vector(ae_vector *const vector, size_t new_size);
 
-uint8_t get_ae_vector(const ae_vector *const vector, size_t i, void *par);
+void *append_ae_vector(ae_vector *const vector);
 
-uint8_t get_pointer_ae_vector(const ae_vector *const vector, size_t i, void **par);
+void append_vector_ae_vector(ae_vector *const vector_to, ae_vector *const vector_from, size_t i, size_t n);
 
-uint8_t concat_ae_vector(ae_vector *const vector_to, ae_vector *const vector_from);
+void set_vector_ae_vector(ae_vector *const vector_to, ae_vector *const vector_from, size_t i_to, size_t i_from, size_t n);
 
-uint8_t insert_ae_vector(ae_vector *const vector, size_t i, void *par);
+void *get_ae_vector(const ae_vector *const vector, size_t i);
 
-uint8_t insert_vector_ae_vector(ae_vector *const vector_to, ae_vector *const vector_from, size_t i_to, size_t i_from, size_t n);
+ae_vector concat_ae_vector(ae_vector *c_vector, ae_vector *const vector_to, ae_vector *const vector_from);
 
-uint8_t pop_ae_vector(ae_vector *const vector, void *par);
+void *insert_ae_vector(ae_vector *const vector, size_t i);
 
-uint8_t pop_vector_ae_vector(ae_vector *const vector, size_t n, ae_vector *const par);
+void insert_vector_ae_vector(ae_vector *const vector_to, ae_vector *const vector_from, size_t i_to, size_t i_from, size_t n);
 
-uint8_t delete_ae_vector(ae_vector *const vector, size_t i, void *par);
+void delete_ae_vector(ae_vector *const vector, size_t i, void *par);
 
-uint8_t delete_vector_ae_vector(ae_vector *const vector, size_t i, size_t n, ae_vector *const par);
+void delete_vector_ae_vector(ae_vector *const vector, size_t i, size_t n, ae_vector *par);
 
-uint8_t duplicate_ae_vector(ae_vector *const vector_out, const ae_vector *const vector_in);
+void pop_ae_vector(ae_vector *const vector, void *par);
 
-uint8_t invert_ae_vector(ae_vector *const vector);
+void pop_vector_ae_vector(ae_vector *const vector, size_t n, ae_vector *par);
 
-uint8_t find_ae_vector(const ae_vector *const vector, void *par, size_t *ret);
+ae_vector duplicate_ae_vector(ae_vector *d_vector, const ae_vector *const vector);
 
-uint8_t sort_ae_vector(ae_vector *const vector, int (*comparator)(const void *, const void *));
+void invert_ae_vector(ae_vector *const vector);
 
-uint8_t swap_ae_vector(ae_vector *const vector, size_t i, size_t j);
+size_t find_ae_vector(const ae_vector *const vector, void *par);
 
-uint8_t optimize_ae_vector(ae_vector *const vector);
+void sort_ae_vector(ae_vector *const vector, int (*comparator)(const void *, const void *));
+
+void swap_ae_vector(ae_vector *const vector, size_t i, size_t j);
+
+void optimize_ae_vector(ae_vector *const vector);
 
 #endif // __AETHER_VECTOR__

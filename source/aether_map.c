@@ -1,3 +1,4 @@
+#define AE_BASE
 #include "aether_map.h"
 #include <string.h>
 #include <math.h>
@@ -9,9 +10,8 @@ typedef enum
     USED_AE
 } AE_MAP_ELEMNT;
 
-const size_t ae_base_size = sizeof(ae_base);
-const size_t uint8_t_size = sizeof(uint8_t);
-const size_t uint32_t_size = sizeof(uint32_t);
+static const size_t uint8_t_size = sizeof(uint8_t);
+static const size_t uint32_t_size = sizeof(uint32_t);
 
 #define STATUS_AE(kv) *(uint8_t *)(kv)
 #define P_STATUS_AE(kv) (kv)
@@ -116,7 +116,6 @@ static uint32_t key_function(const char *key, size_t len)
 ae_map create_ae_map(size_t data_size, size_t quant, size_t (*func)(const char *, size_t))
 {
     ae_map new_map = {
-        .data = init_ae_base(),
         .occupancy = 0,
         .data_size = data_size,
         .element_size = uint8_t_size + uint32_t_size + data_size};
@@ -126,16 +125,16 @@ ae_map create_ae_map(size_t data_size, size_t quant, size_t (*func)(const char *
     else
         new_map.hash_func = func;
 
-    create_max_size_ae_base(&new_map.data, &new_map.element_size, quant);
+    new_map.data = create_max_size_ae_base(&new_map.element_size, quant);
 
     return new_map;
 }
 
-uint8_t free_ae_map(ae_map *map)
+void free_ae_map(ae_map *map)
 {
     free_ae_base(&map->data);
 
-    return 0;
+    return;
 }
 
 uint8_t set_ae_map(ae_map *map, const char *key, size_t key_l, void *par)
@@ -150,8 +149,7 @@ uint8_t set_ae_map(ae_map *map, const char *key, size_t key_l, void *par)
     size_t offset = 1;
     while (true)
     {
-        if (get_pointer_ae_base(&map->data, &map->element_size, index, &kv) != 0)
-            return 4;
+        kv = get_ae_base(&map->data, &map->element_size, index);
         if (STATUS_AE(kv) == USED_AE && KEY_AE(kv) == h_key)
         {
             memmove(P_DATA_AE(kv), par, map->data_size);
@@ -180,15 +178,13 @@ uint8_t set_ae_map(ae_map *map, const char *key, size_t key_l, void *par)
 
 uint8_t resize_ae_map(ae_map *map)
 {
-    ae_base new_base = init_ae_base();
-    create_max_size_ae_base(&new_base, &map->element_size, 4 * map->data.max_quant);
+    ae_base new_base = create_max_size_ae_base(&map->element_size, 4 * map->data.max_quant);
 
     void *kv;
 
     for (size_t i = 0; i < map->occupancy; i++)
     {
-        if (get_pointer_ae_base(&map->data, &map->element_size, i, &kv) != 0)
-            return 4;
+        kv = get_ae_base(&map->data, &map->element_size, i);
         if (STATUS_AE(kv) != USED_AE)
             continue;
         uint32_t h_key = KEY_AE(kv);
@@ -197,8 +193,7 @@ uint8_t resize_ae_map(ae_map *map)
         size_t offset = 1;
         while (true)
         {
-            if (get_pointer_ae_base(&new_base, &map->element_size, index, &kv) != 0)
-                return 4;
+            kv = get_ae_base(&new_base, &map->element_size, index);
             if (STATUS_AE(kv) != USED_AE)
             {
                 memset(P_STATUS_AE(kv), USED_AE, uint8_t_size);
@@ -228,8 +223,7 @@ uint8_t get_ae_map(ae_map *map, const char *key, size_t key_l, void *par)
     size_t offset = 1;
     while (true)
     {
-        if (get_pointer_ae_base(&map->data, &map->element_size, i, &kv) != 0)
-            return 1;
+        kv = get_ae_base(&map->data, &map->element_size, i);
         if (STATUS_AE(kv) == USED_AE)
         {
             if (KEY_AE(kv) == h_key)
@@ -258,8 +252,7 @@ uint8_t delete_ae_map(ae_map *map, const char *key, size_t key_l, void *par)
     size_t offset = 1;
     while (true)
     {
-        if (get_pointer_ae_base(&map->data, &map->element_size, i, &kv) != 0)
-            return 1;
+        kv = get_ae_base(&map->data, &map->element_size, i);
         if (STATUS_AE(kv) == USED_AE)
         {
             if (KEY_AE(kv) == h_key)
@@ -291,8 +284,7 @@ bool has_key_ae_map(ae_map *map, const char *key, size_t key_l)
     size_t offset = 1;
     while (true)
     {
-        if (get_pointer_ae_base(&map->data, &map->element_size, i, &kv) != 0)
-            return false;
+        kv = get_ae_base(&map->data, &map->element_size, i);
         if (STATUS_AE(kv) == USED_AE)
         {
             if (KEY_AE(kv) == h_key)

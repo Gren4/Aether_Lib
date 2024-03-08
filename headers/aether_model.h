@@ -36,10 +36,10 @@ ae_model open_ae_model(const char *m_filename, const char *t_filename, const ae_
 void close_ae_model(ae_model *model);
 size_t n_verts_ae_model(ae_model const *model);
 size_t n_faces_ae_model(ae_model const *model);
-void vert_ae_model(ae_model const *model, const size_t i, ae_vec3_f *vert);
-void face_ae_model(ae_model const *model, const size_t i, ae_face *face);
-void uv_ae_model(ae_model const *model, const size_t i, ae_vec2_f *uv);
-void normal_ae_model(ae_model const *model, const size_t i, ae_vec3_f *norm);
+ae_vec3_f vert_ae_model(ae_model const *model, const size_t i);
+void* face_ae_model(ae_model const *model, const size_t i);
+ae_vec2_f uv_ae_model(ae_model const *model, const size_t i);
+ae_vec3_f normal_ae_model(ae_model const *model, const size_t i);
 ae_tga_c texture_ae_model(ae_model const *model, ae_vec2_f const *uv);
 ae_vec3_f normal_map_ae_model(ae_model const *model, ae_vec2_f const *uv);
 double specular_map_ae_model(ae_model const *model, ae_vec2_f const *uv);

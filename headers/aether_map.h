@@ -1,8 +1,13 @@
 #ifndef __AETHER_MAP__
 #define __AETHER_MAP__
 
-#include "aether_vector.h"
+#include "aether_base.h"
 #include <stdbool.h>
+
+#define INIT_AE_MAP                                                                                \
+    {                                                                                              \
+        .data = INIT_AE_BASE, .occupancy = 0, .element_size = 0, .data_size = 0, .hash_func = NULL \
+    }
 
 typedef struct
 {
@@ -15,7 +20,7 @@ typedef struct
 
 ae_map create_ae_map(size_t data_size, size_t quant, size_t (*func)(const char *, size_t));
 
-uint8_t free_ae_map(ae_map *map);
+void free_ae_map(ae_map *map);
 
 uint8_t resize_ae_map(ae_map *map);
 

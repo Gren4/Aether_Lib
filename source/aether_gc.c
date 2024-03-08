@@ -4,11 +4,11 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-struct ae_garbage_
+typedef struct ae_garbage
 {
     void *data;
     size_t stack_idx;
-};
+} ae_garbage;
 
 static size_t ae_stack_idx;
 static ae_vector ae_gc;
@@ -23,14 +23,13 @@ void init_ae_gc(void)
 size_t append_ae_gc(void *data)
 {
     ae_garbage garbage = {.data = data, .stack_idx = ae_stack_idx};
-    append_ae_vector(&ae_gc, (void *)(&garbage));
-    return ae_gc.data.quant - 1;
+    *(ae_garbage*)append_ae_vector(&ae_gc) = garbage;
+    return quant_ae_vector(&ae_gc) - 1;
 }
 
 void update_ae_gc(size_t i, void *data)
 {
-    ae_garbage *garbage;
-    get_pointer_ae_vector(&ae_gc, i, (void**)&garbage);
+    ae_garbage *garbage = (ae_garbage*)get_ae_vector(&ae_gc, i);
     garbage->data = data;
 
     return;
@@ -51,10 +50,9 @@ void on_enter_ae_gc(void)
 
 void on_return_ae_gc(void)
 {
-    ae_garbage garbage;
-    while (ae_gc.data.quant != 0)
+    while (quant_ae_vector(&ae_gc) != 0)
     {
-        get_ae_vector(&ae_gc, ae_gc.data.quant - 1, &garbage);
+        ae_garbage garbage = *(ae_garbage*)get_ae_vector(&ae_gc, ae_gc.data.quant - 1);
 
         if (garbage.stack_idx == ae_stack_idx)
         {
