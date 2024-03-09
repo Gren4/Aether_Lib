@@ -11,7 +11,7 @@ int main(void)
 {
     init_ae_gc();
     clock_t tic, toc;
-    ae_vector models = create_ae_vector(sizeof(ae_model), 0);
+    ae_vec models = create_ae_vec(sizeof(ae_model), 0);
     tic = clock();
     ae_model model;
 
@@ -22,7 +22,7 @@ int main(void)
         "models\\african_head_nm_tangent.tga",
         "models\\african_head_spec.tga");
 
-    *(ae_model*)append_ae_vector(&models) = model;
+    *(ae_model*)append_ae_vec(&models) = model;
 
 
     model = open_ae_model(
@@ -32,7 +32,7 @@ int main(void)
         "models\\floor_nm_tangent.tga",
         NULL);
 
-    *(ae_model*)append_ae_vector(&models) = model;
+    *(ae_model*)append_ae_vec(&models) = model;
 
 
     model = open_ae_model(
@@ -42,7 +42,7 @@ int main(void)
         "models\\african_head_eye_inner_nm.tga",
         "models\\african_head_eye_inner_spec.tga");
 
-    *(ae_model*)append_ae_vector(&models) = model;
+    *(ae_model*)append_ae_vec(&models) = model;
 
     toc = clock();
     printf("Open model execution time: %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);

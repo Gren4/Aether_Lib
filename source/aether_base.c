@@ -1,4 +1,3 @@
-#define AE_BASE
 #include "aether_base.h"
 
 extern inline size_t find_next_power_of_2(size_t n);
@@ -35,11 +34,11 @@ extern inline void *insert_ae_base(ae_base *const base, const size_t *const data
 
 extern inline void insert_base_ae_base(ae_base *const base_to, ae_base *const base_from, const size_t *const data_size, size_t i_to, size_t i_from, size_t n);
 
-extern inline void delete_ae_base(ae_base *const base, const size_t *const data_size, size_t i, void *par);
+extern inline void delete_ae_base(ae_base *const base, const size_t *const data_size, size_t i, void *const par);
 
 extern inline void delete_base_ae_base(ae_base *const base, const size_t *const data_size, size_t i, size_t n, ae_base *par);
 
-extern inline void pop_ae_base(ae_base *const base, const size_t *const data_size, void *par);
+extern inline void pop_ae_base(ae_base *const base, const size_t *const data_size, void *const par);
 
 extern inline void pop_base_ae_base(ae_base *const base, const size_t *const data_size, size_t n, ae_base *par);
 
@@ -47,7 +46,7 @@ extern inline ae_base duplicate_ae_base(ae_base *d_base, const ae_base *const ba
 
 extern inline void invert_ae_base(ae_base *const base, const size_t *const data_size);
 
-extern inline size_t find_ae_base(const ae_base *const base, const size_t *const data_size, void *par);
+extern inline size_t find_ae_base(const ae_base *const base, const size_t *const data_size, void *const par);
 
 extern inline void sort_ae_base(ae_base *const base, const size_t *const data_size, int (*comparator)(const void *, const void *));
 

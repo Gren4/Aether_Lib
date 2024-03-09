@@ -33,7 +33,7 @@ int32_t width = 800;
 int32_t height = 800;
 int32_t depth = 2000;
 
-void render_model(ae_vector const *models)
+void render_model(ae_vec const *models)
 {
     ae_tga_i image = create_ae_tga(width, height, RGBA);
     ae_model model;
@@ -71,7 +71,7 @@ void render_model(ae_vector const *models)
         AE_MATRIX_F_MULT(Z, ViewPort, Proj_ModelView, 4, 4);
         for (size_t m = 0; m < models->data.quant; m++)
         {
-            model = *(ae_model*)get_ae_vector(models, m);
+            model = *(ae_model*)get_ae_vec(models, m);
             for (size_t i = 0; i < n_faces_ae_model(&model); i++)
             {
                 if (ShadowBufferShader.vertex(&model, i))
@@ -92,7 +92,7 @@ void render_model(ae_vector const *models)
 
     for (size_t m = 0; m < models->data.quant; m++)
     {
-        model = *(ae_model*)get_ae_vector(models, m);
+        model = *(ae_model*)get_ae_vec(models, m);
         for (size_t i = 0; i < n_faces_ae_model(&model); i++)
         {
             if (Shader.vertex(&model, i))

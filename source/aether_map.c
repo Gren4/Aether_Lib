@@ -1,4 +1,3 @@
-#define AE_BASE
 #include "aether_map.h"
 #include <string.h>
 #include <math.h>
@@ -9,6 +8,8 @@ typedef enum
     DELETED_AE,
     USED_AE
 } AE_MAP_ELEMNT;
+
+#define AETHER_MAP_ADD_SIZE 4
 
 static const size_t uint8_t_size = sizeof(uint8_t);
 static const size_t uint32_t_size = sizeof(uint32_t);
@@ -113,7 +114,7 @@ static uint32_t key_function(const char *key, size_t len)
     return h;
 }
 
-ae_map create_ae_map(size_t data_size, size_t quant, size_t (*func)(const char *, size_t))
+ae_map create_ae_map(size_t data_size, size_t (*func)(const char *, size_t))
 {
     ae_map new_map = {
         .occupancy = 0,
@@ -125,66 +126,25 @@ ae_map create_ae_map(size_t data_size, size_t quant, size_t (*func)(const char *
     else
         new_map.hash_func = func;
 
-    new_map.data = create_max_size_ae_base(&new_map.element_size, quant);
+    new_map.data = create_max_size_ae_base(&new_map.element_size, AETHER_MAP_ADD_SIZE);
 
     return new_map;
 }
 
-void free_ae_map(ae_map *map)
+void free_ae_map(ae_map *const map)
 {
     free_ae_base(&map->data);
 
     return;
 }
 
-uint8_t set_ae_map(ae_map *map, const char *key, size_t key_l, void *par)
-{
-    if (map->occupancy >= map->data.max_quant)
-        if (resize_ae_map(map) != 0)
-            return 2;
-
-    uint32_t h_key = key_function(key, key_l);
-    size_t index = map->hash_func((const char *)&h_key, uint32_t_size) % map->data.max_quant;
-    void *kv;
-    size_t offset = 1;
-    while (true)
-    {
-        kv = get_ae_base(&map->data, &map->element_size, index);
-        if (STATUS_AE(kv) == USED_AE && KEY_AE(kv) == h_key)
-        {
-            memmove(P_DATA_AE(kv), par, map->data_size);
-            break;
-        }
-        else
-        {
-            if (STATUS_AE(kv) != USED_AE)
-            {
-                memset(P_STATUS_AE(kv), USED_AE, uint8_t_size);
-                memmove(P_KEY_AE(kv), &h_key, uint32_t_size);
-                memmove(P_DATA_AE(kv), par, map->data_size);
-                map->occupancy++;
-                break;
-            }
-            else
-            {
-                index = (index + offset) % map->data.max_quant;
-                offset++;
-            }
-        }
-    }
-
-    return 0;
-}
-
-uint8_t resize_ae_map(ae_map *map)
+static void resize_ae_map(ae_map *const map)
 {
     ae_base new_base = create_max_size_ae_base(&map->element_size, 4 * map->data.max_quant);
 
-    void *kv;
-
     for (size_t i = 0; i < map->occupancy; i++)
     {
-        kv = get_ae_base(&map->data, &map->element_size, i);
+        void *kv = get_ae_base(&map->data, &map->element_size, i);
         if (STATUS_AE(kv) != USED_AE)
             continue;
         uint32_t h_key = KEY_AE(kv);
@@ -197,8 +157,8 @@ uint8_t resize_ae_map(ae_map *map)
             if (STATUS_AE(kv) != USED_AE)
             {
                 memset(P_STATUS_AE(kv), USED_AE, uint8_t_size);
-                memmove(P_KEY_AE(kv), &h_key, uint32_t_size);
-                memmove(P_DATA_AE(kv), par, map->data_size);
+                memcpy(P_KEY_AE(kv), &h_key, uint32_t_size);
+                memcpy(P_DATA_AE(kv), par, map->data_size);
                 break;
             }
             else
@@ -211,91 +171,107 @@ uint8_t resize_ae_map(ae_map *map)
     free_ae_base(&map->data);
     map->data = new_base;
 
-    return 0;
+    return;
 }
 
-uint8_t get_ae_map(ae_map *map, const char *key, size_t key_l, void *par)
+void *set_ae_map(ae_map *map, const char *key, size_t key_l)
 {
+    if (map->occupancy >= map->data.max_quant)
+        resize_ae_map(map);
+
     uint32_t h_key = key_function(key, key_l);
     size_t index = map->hash_func((const char *)&h_key, uint32_t_size) % map->data.max_quant;
-    void *kv;
     size_t i = index;
     size_t offset = 1;
     while (true)
     {
-        kv = get_ae_base(&map->data, &map->element_size, i);
-        if (STATUS_AE(kv) == USED_AE)
+        void *kv = get_ae_base(&map->data, &map->element_size, i);
+        if (STATUS_AE(kv) == USED_AE && KEY_AE(kv) == h_key)
         {
-            if (KEY_AE(kv) == h_key)
+            return P_DATA_AE(kv);
+        }
+        else
+        {
+            if (STATUS_AE(kv) != USED_AE)
             {
-                memmove(par, P_DATA_AE(kv), map->data_size);
-                return 0;
+                memset(P_STATUS_AE(kv), USED_AE, uint8_t_size);
+                memcpy(P_KEY_AE(kv), &h_key, uint32_t_size);
+                map->occupancy++;
+                return P_DATA_AE(kv);
+            }
+            else
+            {
+                i = (i + offset) % map->data.max_quant;
+                offset++;
+                assert(i != index);
             }
         }
-        else if (STATUS_AE(kv) == EMPTY_AE)
-        {
-            return 2;
-        }
+    }
+
+    return NULL;
+}
+
+void *get_ae_map(const ae_map *const map, const char *key, size_t key_l)
+{
+    uint32_t h_key = key_function(key, key_l);
+    size_t index = map->hash_func((const char *)&h_key, uint32_t_size) % map->data.max_quant;
+    size_t i = index;
+    size_t offset = 1;
+    while (true)
+    {
+        void *kv = get_ae_base(&map->data, &map->element_size, i);
+        assert(STATUS_AE(kv) != EMPTY_AE);
+        if (STATUS_AE(kv) == USED_AE)
+            if (KEY_AE(kv) == h_key)
+                return P_DATA_AE(kv);
         i = (i + offset) % map->data.max_quant;
         offset++;
-        if (i == index)
-            return 3;
+        assert(i != index);
     }
 }
 
-uint8_t delete_ae_map(ae_map *map, const char *key, size_t key_l, void *par)
+void delete_ae_map(ae_map *const map, const char *key, size_t key_l, void *const par)
 {
     uint32_t h_key = key_function(key, key_l);
     size_t index = map->hash_func((const char *)&h_key, uint32_t_size) % map->data.max_quant;
-    void *kv;
     size_t i = index;
     size_t offset = 1;
     while (true)
     {
-        kv = get_ae_base(&map->data, &map->element_size, i);
+        void *kv = get_ae_base(&map->data, &map->element_size, i);
+        assert(STATUS_AE(kv) != EMPTY_AE);
         if (STATUS_AE(kv) == USED_AE)
-        {
             if (KEY_AE(kv) == h_key)
             {
                 memset(P_STATUS_AE(kv), DELETED_AE, map->data_size);
+                memcpy(par, P_DATA_AE(kv), map->data_size);
                 map->occupancy--;
-                return 0;
+                return;
             }
-        }
-        else if (STATUS_AE(kv) == EMPTY_AE)
-        {
-            return 2;
-        }
         i = (i + offset) % map->data.max_quant;
         offset++;
-        if (i == index)
-            return 3;
+        assert(i != index);
     }
 
-    return 0;
+    return;
 }
 
-bool has_key_ae_map(ae_map *map, const char *key, size_t key_l)
+bool has_key_ae_map(const ae_map *const map, const char *key, size_t key_l)
 {
     uint32_t h_key = key_function(key, key_l);
     size_t index = map->hash_func((const char *)&h_key, uint32_t_size) % map->data.max_quant;
-    void *kv;
     size_t i = index;
     size_t offset = 1;
     while (true)
     {
-        kv = get_ae_base(&map->data, &map->element_size, i);
+        void *kv = get_ae_base(&map->data, &map->element_size, i);
         if (STATUS_AE(kv) == USED_AE)
         {
             if (KEY_AE(kv) == h_key)
-            {
                 return true;
-            }
         }
         else if (STATUS_AE(kv) == EMPTY_AE)
-        {
             return false;
-        }
         i = (i + offset) % map->data.max_quant;
         offset++;
         if (i == index)

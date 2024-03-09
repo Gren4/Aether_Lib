@@ -13,10 +13,10 @@
 ae_model open_ae_model(const char *m_filename, const char *t_filename, const ae_nm_type nm_type, const char *nm_filename, const char *sm_filename)
 {
     ae_model new_model = {
-        .verts = create_ae_vector(sizeof(ae_vec3_f), 0),
-        .faces = create_ae_vector(sizeof(ae_face) * 3, 0),
-        .uvs = create_ae_vector(sizeof(ae_vec2_f), 0),
-        .normals = create_ae_vector(sizeof(ae_vec3_f), 0),
+        .verts = create_ae_vec(sizeof(ae_vec3_f), 0),
+        .faces = create_ae_vec(sizeof(ae_face) * 3, 0),
+        .uvs = create_ae_vec(sizeof(ae_vec2_f), 0),
+        .normals = create_ae_vec(sizeof(ae_vec3_f), 0),
         .texture = {.data = NULL},
         .nm_type = AE_NM_NONE,
         .normal_map = {.data = NULL},
@@ -63,7 +63,7 @@ ae_model open_ae_model(const char *m_filename, const char *t_filename, const ae_
         {
             ae_vec3_f v;
             fscanf(in, "%lf %lf %lf\n", &v.x, &v.y, &v.z);
-            *(ae_vec3_f*)append_ae_vector(&new_model.verts) = v;
+            *(ae_vec3_f*)append_ae_vec(&new_model.verts) = v;
         }
         break;
 
@@ -72,7 +72,7 @@ ae_model open_ae_model(const char *m_filename, const char *t_filename, const ae_
             ae_vec2_f uv;
             double temp;
             fscanf(in, "  %lf %lf %lf\n", &uv.u, &uv.v, &temp);
-            *(ae_vec2_f*)append_ae_vector(&new_model.uvs) = uv;
+            *(ae_vec2_f*)append_ae_vec(&new_model.uvs) = uv;
         }
         break;
 
@@ -80,7 +80,7 @@ ae_model open_ae_model(const char *m_filename, const char *t_filename, const ae_
         {
             ae_vec3_f vn;
             fscanf(in, "  %lf %lf %lf\n", &vn.x, &vn.y, &vn.z);
-            *(ae_vec3_f*)append_ae_vector(&new_model.normals) = vn;
+            *(ae_vec3_f*)append_ae_vec(&new_model.normals) = vn;
         }
         break;
 
@@ -94,7 +94,7 @@ ae_model open_ae_model(const char *m_filename, const char *t_filename, const ae_
                 faces[i].uv_i -= 1;
                 faces[i].norm_i -= 1;
             }
-            memcpy(append_ae_vector(&new_model.faces), faces, sizeof(ae_face) * 3);
+            memcpy(append_ae_vec(&new_model.faces), faces, sizeof(ae_face) * 3);
         }
         break;
 
@@ -108,20 +108,20 @@ ae_model open_ae_model(const char *m_filename, const char *t_filename, const ae_
             break;
         }
     }
-    optimize_ae_vector(&new_model.verts);
-    optimize_ae_vector(&new_model.faces);
-    optimize_ae_vector(&new_model.normals);
-    optimize_ae_vector(&new_model.uvs);
+    optimize_ae_vec(&new_model.verts);
+    optimize_ae_vec(&new_model.faces);
+    optimize_ae_vec(&new_model.normals);
+    optimize_ae_vec(&new_model.uvs);
 
     return new_model;
 }
 
 void close_ae_model(ae_model *model)
 {
-    free_ae_vector(&model->verts);
-    free_ae_vector(&model->faces);
-    free_ae_vector(&model->normals);
-    free_ae_vector(&model->uvs);
+    free_ae_vec(&model->verts);
+    free_ae_vec(&model->faces);
+    free_ae_vec(&model->normals);
+    free_ae_vec(&model->uvs);
 
     return;
 }
@@ -138,22 +138,22 @@ size_t n_faces_ae_model(ae_model const *model)
 
 ae_vec3_f vert_ae_model(ae_model const *model, const size_t i)
 {
-    return *(ae_vec3_f*)get_ae_vector(&model->verts, i);
+    return *(ae_vec3_f*)get_ae_vec(&model->verts, i);
 }
 
 void* face_ae_model(ae_model const *model, const size_t i)
 {
-    return get_ae_vector(&model->faces, i);
+    return get_ae_vec(&model->faces, i);
 }
 
 ae_vec2_f uv_ae_model(ae_model const *model, const size_t i)
 {
-    return *(ae_vec2_f*)get_ae_vector(&model->uvs, i);
+    return *(ae_vec2_f*)get_ae_vec(&model->uvs, i);
 }
 
 ae_vec3_f normal_ae_model(ae_model const *model, const size_t i)
 {
-    return *(ae_vec3_f*)get_ae_vector(&model->normals, i);
+    return *(ae_vec3_f*)get_ae_vec(&model->normals, i);
 }
 
 ae_tga_c texture_ae_model(ae_model const *model, ae_vec2_f const *uv)

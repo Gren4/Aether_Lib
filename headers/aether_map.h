@@ -18,18 +18,16 @@ typedef struct
     size_t (*hash_func)(const char *, size_t key_l);
 } ae_map;
 
-ae_map create_ae_map(size_t data_size, size_t quant, size_t (*func)(const char *, size_t));
+ae_map create_ae_map(size_t data_size, size_t (*func)(const char *, size_t));
 
-void free_ae_map(ae_map *map);
+void free_ae_map(ae_map *const map);
 
-uint8_t resize_ae_map(ae_map *map);
+void *set_ae_map(ae_map *const map, const char *key, size_t key_l);
 
-uint8_t set_ae_map(ae_map *map, const char *key, size_t key_l, void *par);
+void *get_ae_map(const ae_map *const map, const char *key, size_t key_l);
 
-bool has_key_ae_map(ae_map *map, const char *key, size_t key_l);
+void delete_ae_map(ae_map *const map, const char *key, size_t key_l, void *const par);
 
-uint8_t get_ae_map(ae_map *map, const char *key, size_t key_l, void *par);
-
-uint8_t delete_ae_map(ae_map *map, const char *key, size_t key_l, void *par);
+bool has_key_ae_map(const ae_map *const map, const char *key, size_t key_l);
 
 #endif // __AETHER_MAP__

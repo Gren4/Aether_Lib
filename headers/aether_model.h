@@ -22,10 +22,10 @@ typedef enum ae_nm_type
 
 typedef struct ae_model
 {
-    ae_vector verts;
-    ae_vector faces;
-    ae_vector normals;
-    ae_vector uvs;
+    ae_vec verts;
+    ae_vec faces;
+    ae_vec normals;
+    ae_vec uvs;
     ae_tga_i texture;
     ae_nm_type nm_type;
     ae_tga_i normal_map;

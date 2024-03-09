@@ -16,8 +16,6 @@ typedef struct ae_base
     size_t max_quant;
 } ae_base;
 
-#ifdef AE_BASE
-
 #include <string.h>
 #include <math.h>
 #include <assert.h>
@@ -330,7 +328,7 @@ inline void insert_base_ae_base(ae_base *const base_to, ae_base *const base_from
     return;
 }
 
-inline void delete_ae_base(ae_base *const base, const size_t *const data_size, size_t i, void *par)
+inline void delete_ae_base(ae_base *const base, const size_t *const data_size, size_t i, void *const par)
 {
     assert(i >= 0 && i < base->quant);
 
@@ -373,7 +371,7 @@ inline void delete_base_ae_base(ae_base *const base, const size_t *const data_si
     return;
 }
 
-inline void pop_ae_base(ae_base *const base, const size_t *const data_size, void *par)
+inline void pop_ae_base(ae_base *const base, const size_t *const data_size, void *const par)
 {
     assert(base->quant != 0);
 
@@ -461,7 +459,7 @@ inline void invert_ae_base(ae_base *const base, const size_t *const data_size)
     return;
 }
 
-inline size_t find_ae_base(const ae_base *const base, const size_t *const data_size, void *par)
+inline size_t find_ae_base(const ae_base *const base, const size_t *const data_size, void *const par)
 {
     for (size_t i = 0; i < base->quant; i++)
     {
@@ -518,7 +516,5 @@ inline void optimize_ae_base(ae_base *const base, const size_t *const data_size)
 
     return;
 }
-
-#endif
 
 #endif // __AETHER_BASE__

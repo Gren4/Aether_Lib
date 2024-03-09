@@ -8,6 +8,9 @@
         .pointers = INIT_AE_BASE, .blocks = INIT_AE_BASE, .front_i = 0, .back_i = 0, .front_block = 0, .back_block = 0, .data_size = 0 \
     }
 
+#define AETHER_BLOCKS_ADD_SIZE 8
+#define AETHER_DEQUE_ADD_SIZE 2
+
 typedef struct
 {
     ae_base pointers;
@@ -17,38 +20,33 @@ typedef struct
     size_t front_block;
     size_t back_block;
     size_t data_size;
-} ae_deque;
+} ae_deq;
 
-ae_deque create_ae_deque(size_t data_size);
+ae_deq create_ae_deq(size_t data_size);
 
-void prepare_ae_deque(ae_deque *deque);
+inline size_t quant_ae_deq(const ae_deq *const deque)
+{
+    return ((deque->back_block - deque->front_block) - 1) * AETHER_BLOCKS_ADD_SIZE + deque->back_i + AETHER_BLOCKS_ADD_SIZE - deque->front_i + 1;
+}
 
-uint8_t free_ae_deque(ae_deque *deque);
+void free_ae_deq(ae_deq *const deque);
 
-uint8_t reorganize_ae_deque(ae_deque *deque);
+void *push_front_ae_deq(ae_deq *const deque);
 
-uint8_t resize_ae_deque(ae_deque *deque);
+void pop_front_ae_deq(ae_deq *const deque, void *const par);
 
-uint8_t minimize_ae_deque(ae_deque *deque);
+void *front_ae_deq(const ae_deq *const deque);
 
-uint8_t push_front_ae_deque(ae_deque *deque, void *par);
+void *push_back_ae_deq(ae_deq *const deque);
 
-uint8_t pop_front_ae_deque(ae_deque *deque, void *par);
+void pop_back_ae_deq(ae_deq *const deque, void *const par);
 
-uint8_t front_ae_deque(ae_deque *deque, void *par);
+void *back_ae_deq(const ae_deq *const deque);
 
-uint8_t push_back_ae_deque(ae_deque *deque, void *par);
+void *get_ae_deq(const ae_deq *const deque, size_t i);
 
-uint8_t pop_back_ae_deque(ae_deque *deque, void *par);
+void *insert_ae_deq(ae_deq *const deque, size_t i);
 
-uint8_t back_ae_deque(ae_deque *deque, void *par);
-
-uint8_t get_ae_deque(ae_deque *deque, size_t i, void *par);
-
-uint8_t set_ae_deque(ae_deque *deque, size_t i, void *par);
-
-uint8_t insert_ae_deque(ae_deque *deque, size_t i, void *par);
-
-uint8_t delete_ae_deque(ae_deque *deque, size_t i, void *par);
+void delete_ae_deq(ae_deq *const deque, size_t i, void *const par);
 
 #endif // __AETHER_DEQUE__
