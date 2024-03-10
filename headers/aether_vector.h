@@ -18,7 +18,7 @@ void create_gc_ae_vec(ae_vec *const gc, size_t data_size);
 
 ae_vec create_ae_vec(size_t data_size, size_t quant);
 
-inline size_t gc_idx_ae_vec(ae_vec *const vector)
+inline int32_t gc_idx_ae_vec(ae_vec *const vector)
 {
     return gc_idx_ae_base(&vector->data);
 }

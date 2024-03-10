@@ -20,7 +20,7 @@ void init_ae_gc(void)
     return;
 }
 
-size_t append_ae_gc(void *data)
+int32_t append_ae_gc(void *data)
 {
     ae_garbage garbage = {.data = data, .stack_idx = ae_stack_idx};
     *(ae_garbage*)append_ae_vec(&ae_gc) = garbage;

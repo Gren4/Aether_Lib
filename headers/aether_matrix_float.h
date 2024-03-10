@@ -11,7 +11,7 @@
 typedef struct ae_mat_f
 {
     double *data;
-    size_t gc_idx;
+    int32_t gc_idx;
     uint32_t rows;
     uint32_t cols;
 } ae_mat_f;
@@ -41,6 +41,10 @@ ae_mat_f sub_ae_mat_f(ae_mat_f *const m_matrix, const ae_mat_f *const matrix1, c
 ae_mat_f mult_by_sclr_ae_mat_f(ae_mat_f *const m_matrix, const ae_mat_f *const matrix, const double scalar);
 
 ae_mat_f mult_by_mat_ae_mat_f(ae_mat_f *const m_matrix, const ae_mat_f *const matrix1, const ae_mat_f *const matrix2);
+
+ae_mat_f strassen_mult_by_mat_ae_mat_f(ae_mat_f *const m_matrix, const ae_mat_f *const matrix1, const ae_mat_f *const matrix2);
+
+ae_mat_f mult_by_mat2_ae_mat_f(ae_mat_f *const m_matrix, const ae_mat_f *const matrix1, const ae_mat_f *const matrix2);
 
 ae_mat_f transpose_ae_mat_f(ae_mat_f *const m_matrix, const ae_mat_f *const matrix);
 

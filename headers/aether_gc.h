@@ -9,7 +9,7 @@
 #define AE__ on_return_ae_gc(); }
 
 void init_ae_gc(void);
-size_t append_ae_gc(void *data);
+int32_t append_ae_gc(void *data);
 void update_ae_gc(size_t i, void *data);
 void remove_ae_gc(size_t i);
 

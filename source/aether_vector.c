@@ -2,7 +2,7 @@
 #include <assert.h>
 #include <string.h>
 
-extern inline size_t gc_idx_ae_vec(ae_vec *const vector);
+extern inline int32_t gc_idx_ae_vec(ae_vec *const vector);
 
 extern inline size_t quant_ae_vec(ae_vec *const vector);
 

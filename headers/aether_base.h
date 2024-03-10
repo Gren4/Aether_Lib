@@ -11,7 +11,7 @@
 typedef struct ae_base
 {
     void *memory;
-    size_t gc_idx;
+    int32_t gc_idx;
     size_t quant;
     size_t max_quant;
 } ae_base;
@@ -74,13 +74,13 @@ inline void check_realloc_ae_base(ae_base *const base, const size_t *const data_
     case AE_BASE_INCR:
         check = new_size > base->max_quant;
         if (check)
-            base->max_quant *= 2;
+            base->max_quant = base->max_quant << 1;
         break;
 
     case AE_BASE_DECR:
         check = new_size < base->max_quant / 8;
         if (check)
-            base->max_quant /= 2;
+            base->max_quant = base->max_quant >> 1;
         break;
 
     default:
@@ -199,7 +199,7 @@ inline void resize_ae_base(ae_base *const base, const size_t *const data_size, s
     return;
 }
 
-inline size_t gc_idx_ae_base(ae_base *const base)
+inline int32_t gc_idx_ae_base(ae_base *const base)
 {
     return base->gc_idx;
 }

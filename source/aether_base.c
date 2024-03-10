@@ -10,7 +10,7 @@ extern inline ae_base create_ae_base(const size_t *const data_size, size_t new_s
 
 extern inline ae_base create_max_size_ae_base(const size_t *const data_size, size_t new_size);
 
-extern inline size_t gc_idx_ae_base(ae_base *const base);
+extern inline int32_t gc_idx_ae_base(ae_base *const base);
 
 extern inline size_t quant_ae_base(ae_base *const base);
 
