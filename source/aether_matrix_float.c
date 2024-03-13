@@ -188,10 +188,64 @@ ae_mat_f mult_by_sclr_ae_mat_f(ae_mat_f *const m_matrix, const ae_mat_f *const m
     return new_matrix;
 }
 
-ae_mat_f mult_by_mat_ae_mat_f(ae_mat_f *const m_matrix, const ae_mat_f *const matrix1, const ae_mat_f *const matrix2)
+static inline ae_mat_f resize_temp_ae_mat_f(const ae_mat_f *const matrix, const uint32_t rows, const uint32_t cols)
 {
-    assert(matrix1->cols == matrix2->rows);
+    ae_mat_f new_matrix = create_temp_ae_mat_f(rows, cols);
 
+    for (uint32_t i = 0; i < matrix->rows; i++)
+    {
+        for (uint32_t j = 0; j < matrix->cols; j++)
+            AE_MATRIX_ELEM(new_matrix, i, j) = AE_MATRIX_P_ELEM(matrix, i, j);
+        for (uint32_t j = matrix->cols; j < new_matrix.cols; j++)
+            AE_MATRIX_ELEM(new_matrix, i, j) = 0.0;
+    }
+
+    for (uint32_t i = matrix->rows; i < new_matrix.rows; i++)
+        for (uint32_t j = 0; j < new_matrix.cols; j++)
+            AE_MATRIX_ELEM(new_matrix, i, j) = 0.0;
+
+    return new_matrix;
+}
+
+static inline ae_mat_f mult_transpose_ae_mat_f(ae_mat_f *const m_matrix, const ae_mat_f *const matrix1, const ae_mat_f *const matrix2)
+{
+    ae_mat_f new_matrix;
+    if (m_matrix == NULL)
+        new_matrix = create_ae_mat_f(matrix1->rows, matrix2->cols);
+    else
+        new_matrix = create_temp_ae_mat_f(matrix1->rows, matrix2->cols);
+
+    double *matrix_cache = calloc(matrix1->cols, sizeof(double));
+
+    for (uint32_t j = 0; j < new_matrix.cols; j++)
+    {
+        for (uint32_t k = 0; k < matrix1->cols; k++)
+            matrix_cache[k] = AE_MATRIX_P_ELEM(matrix2, k, j);
+        for (uint32_t i = 0; i < new_matrix.rows; i++)
+        {
+            AE_MATRIX_ELEM(new_matrix, i, j) = AE_MATRIX_P_ELEM(matrix1, i, 0) * matrix_cache[0];
+            for (uint32_t k = 1; k < matrix1->cols; k++)
+                AE_MATRIX_ELEM(new_matrix, i, j) += AE_MATRIX_P_ELEM(matrix1, i, k) * matrix_cache[k];
+        }
+    }
+
+    free(matrix_cache);
+
+    if (m_matrix != NULL)
+    {
+        free(m_matrix->data);
+        if (m_matrix->gc_idx != -1)
+        {
+            new_matrix.gc_idx = m_matrix->gc_idx;
+            update_ae_gc(m_matrix->gc_idx, new_matrix.data);
+        }
+    }
+
+    return new_matrix;
+}
+
+static inline ae_mat_f mult_standart_ae_mat_f(ae_mat_f *const m_matrix, const ae_mat_f *const matrix1, const ae_mat_f *const matrix2)
+{
     ae_mat_f new_matrix;
     if (m_matrix == NULL)
         new_matrix = create_ae_mat_f(matrix1->rows, matrix2->cols);
@@ -219,32 +273,182 @@ ae_mat_f mult_by_mat_ae_mat_f(ae_mat_f *const m_matrix, const ae_mat_f *const ma
     return new_matrix;
 }
 
-ae_mat_f mult_by_mat2_ae_mat_f(ae_mat_f *const m_matrix, const ae_mat_f *const matrix1, const ae_mat_f *const matrix2)
+static void dop_strassen_mult_by_mat_ae_mat_f(ae_mat_f *const m_matrix, const ae_mat_f *const matrix1, const ae_mat_f *const matrix2)
 {
-    assert(matrix1->cols == matrix2->rows);
-
-    ae_mat_f new_matrix;
-    if (m_matrix == NULL)
-        new_matrix = create_ae_mat_f(matrix1->rows, matrix2->cols);
-    else
-        new_matrix = create_temp_ae_mat_f(matrix1->rows, matrix2->cols);
-
-    double *matrix_crt = calloc(matrix2->rows + matrix1->cols, sizeof(double));
-
-    for (uint32_t j = 0; j < new_matrix.cols; j++)
+    if (matrix1->rows == 2)
     {
-        for (uint32_t k = 0; k < matrix1->cols; k++)
-            matrix_crt[k] = AE_MATRIX_P_ELEM(matrix2, k, j);
-        for (uint32_t i = 0; i < new_matrix.rows; i++)
+        AE_MATRIX_P_ELEM(m_matrix, 0, 0) = AE_MATRIX_P_ELEM(matrix1, 0, 0) * AE_MATRIX_P_ELEM(matrix2, 0, 0) + AE_MATRIX_P_ELEM(matrix1, 0, 1) * AE_MATRIX_P_ELEM(matrix2, 1, 0);
+        AE_MATRIX_P_ELEM(m_matrix, 0, 1) = AE_MATRIX_P_ELEM(matrix1, 0, 0) * AE_MATRIX_P_ELEM(matrix2, 0, 1) + AE_MATRIX_P_ELEM(matrix1, 0, 1) * AE_MATRIX_P_ELEM(matrix2, 1, 1);
+        AE_MATRIX_P_ELEM(m_matrix, 1, 0) = AE_MATRIX_P_ELEM(matrix1, 1, 0) * AE_MATRIX_P_ELEM(matrix2, 0, 0) + AE_MATRIX_P_ELEM(matrix1, 1, 1) * AE_MATRIX_P_ELEM(matrix2, 1, 0);
+        AE_MATRIX_P_ELEM(m_matrix, 1, 1) = AE_MATRIX_P_ELEM(matrix1, 1, 0) * AE_MATRIX_P_ELEM(matrix2, 0, 1) + AE_MATRIX_P_ELEM(matrix1, 1, 1) * AE_MATRIX_P_ELEM(matrix2, 1, 1);
+    }
+    else
+    {
+        uint32_t n = matrix1->rows / 2;
+        uint32_t offset = n * n * sizeof(double);
+
+        void *data = malloc(21 * offset);
+
+        ae_mat_f a = {.data = data, .rows = n, .cols = n};
+        ae_mat_f d = {.data = data + offset, .rows = n, .cols = n};
+        ae_mat_f e = {.data = data + 2 * offset, .rows = n, .cols = n};
+        ae_mat_f h = {.data = data + 3 * offset, .rows = n, .cols = n};
+
+        ae_mat_f s1 = {.data = data + 4 * offset, .rows = n, .cols = n};
+        ae_mat_f s2 = {.data = data + 5 * offset, .rows = n, .cols = n};
+        ae_mat_f s3 = {.data = data + 6 * offset, .rows = n, .cols = n};
+        ae_mat_f s4 = {.data = data + 7 * offset, .rows = n, .cols = n};
+        ae_mat_f s5 = {.data = data + 8 * offset, .rows = n, .cols = n};
+        ae_mat_f s6 = {.data = data + 9 * offset, .rows = n, .cols = n};
+        ae_mat_f s7 = {.data = data + 10 * offset, .rows = n, .cols = n};
+
+        ae_mat_f t1 = {.data = data + 11 * offset, .rows = n, .cols = n};
+        ae_mat_f t2 = {.data = data + 12 * offset, .rows = n, .cols = n};
+        ae_mat_f t3 = {.data = data + 13 * offset, .rows = n, .cols = n};
+        ae_mat_f t4 = {.data = data + 14 * offset, .rows = n, .cols = n};
+        ae_mat_f t5 = {.data = data + 15 * offset, .rows = n, .cols = n};
+        ae_mat_f t6 = {.data = data + 16 * offset, .rows = n, .cols = n};
+        ae_mat_f t7 = {.data = data + 17 * offset, .rows = n, .cols = n};
+        ae_mat_f t8 = {.data = data + 18 * offset, .rows = n, .cols = n};
+        ae_mat_f t9 = {.data = data + 19 * offset, .rows = n, .cols = n};
+        ae_mat_f t10 = {.data = data + 20 * offset, .rows = n, .cols = n};
+
+        for (uint32_t i = 0; i < n; i++)
         {
-            memcpy(matrix_crt + matrix2->rows, matrix1->data + matrix1->cols * i, sizeof(double) * matrix1->cols);
-            AE_MATRIX_ELEM(new_matrix, i, j) = matrix_crt[0 + matrix2->rows] * matrix_crt[0];
-            for (uint32_t k = 1; k < matrix1->cols; k++)
-                AE_MATRIX_ELEM(new_matrix, i, j) += matrix_crt[k + matrix2->rows] * matrix_crt[k];
+            for (uint32_t j = 0; j < n; j++)
+            {
+                AE_MATRIX_ELEM(a, i, j) = AE_MATRIX_P_ELEM(matrix1, i, j);
+                AE_MATRIX_ELEM(d, i, j) = AE_MATRIX_P_ELEM(matrix1, i + n, j + n);
+                AE_MATRIX_ELEM(e, i, j) = AE_MATRIX_P_ELEM(matrix2, i, j);
+                AE_MATRIX_ELEM(h, i, j) = AE_MATRIX_P_ELEM(matrix2, i + n, j + n);
+
+                AE_MATRIX_ELEM(t1, i, j) = AE_MATRIX_P_ELEM(matrix2, i, j + n) - AE_MATRIX_P_ELEM(matrix2, i + n, j + n);
+                AE_MATRIX_ELEM(t2, i, j) = AE_MATRIX_P_ELEM(matrix1, i, j) + AE_MATRIX_P_ELEM(matrix1, i, j + n);
+                AE_MATRIX_ELEM(t3, i, j) = AE_MATRIX_P_ELEM(matrix1, i + n, j) + AE_MATRIX_P_ELEM(matrix1, i + n, j + n);
+                AE_MATRIX_ELEM(t4, i, j) = AE_MATRIX_P_ELEM(matrix2, i + n, j) - AE_MATRIX_P_ELEM(matrix2, i, j);
+                AE_MATRIX_ELEM(t5, i, j) = AE_MATRIX_P_ELEM(matrix1, i, j) + AE_MATRIX_P_ELEM(matrix1, i + n, j + n);
+                AE_MATRIX_ELEM(t6, i, j) = AE_MATRIX_P_ELEM(matrix2, i, j) + AE_MATRIX_P_ELEM(matrix2, i + n, j + n);
+                AE_MATRIX_ELEM(t7, i, j) = AE_MATRIX_P_ELEM(matrix1, i, j + n) - AE_MATRIX_P_ELEM(matrix1, i + n, j + n);
+                AE_MATRIX_ELEM(t8, i, j) = AE_MATRIX_P_ELEM(matrix2, i + n, j) + AE_MATRIX_P_ELEM(matrix2, i + n, j + n);
+                AE_MATRIX_ELEM(t9, i, j) = AE_MATRIX_P_ELEM(matrix1, i, j) - AE_MATRIX_P_ELEM(matrix1, i + n, j);
+                AE_MATRIX_ELEM(t10, i, j) = AE_MATRIX_P_ELEM(matrix2, i, j) + AE_MATRIX_P_ELEM(matrix2, i, j + n);
+            }
         }
+
+        dop_strassen_mult_by_mat_ae_mat_f(&s1, &a, &t1);
+        dop_strassen_mult_by_mat_ae_mat_f(&s2, &t2, &h);
+        dop_strassen_mult_by_mat_ae_mat_f(&s3, &t3, &e);
+        dop_strassen_mult_by_mat_ae_mat_f(&s4, &d, &t4);
+        dop_strassen_mult_by_mat_ae_mat_f(&s5, &t5, &t6);
+        dop_strassen_mult_by_mat_ae_mat_f(&s6, &t7, &t8);
+        dop_strassen_mult_by_mat_ae_mat_f(&s7, &t9, &t10);
+
+        for (uint32_t i = 0; i < n; i++)
+        {
+            for (uint32_t j = 0; j < n; j++)
+            {
+                AE_MATRIX_P_ELEM(m_matrix, i, j) = AE_MATRIX_ELEM(s5, i, j) + AE_MATRIX_ELEM(s6, i, j) + AE_MATRIX_ELEM(s4, i, j) - AE_MATRIX_ELEM(s2, i, j);
+                AE_MATRIX_P_ELEM(m_matrix, i, j + n) = AE_MATRIX_ELEM(s1, i, j) + AE_MATRIX_ELEM(s2, i, j);
+                AE_MATRIX_P_ELEM(m_matrix, i + n, j) = AE_MATRIX_ELEM(s3, i, j) + AE_MATRIX_ELEM(s4, i, j);
+                AE_MATRIX_P_ELEM(m_matrix, i + n, j + n) = AE_MATRIX_ELEM(s1, i, j) - AE_MATRIX_ELEM(s7, i, j) - AE_MATRIX_ELEM(s3, i, j) + AE_MATRIX_ELEM(s5, i, j);
+            }
+        }
+
+        free(data);
     }
 
-    free(matrix_crt);
+    return;
+}
+
+static inline ae_mat_f strassen_mult_by_mat_ae_mat_f(ae_mat_f *const m_matrix, const ae_mat_f *const matrix1, const ae_mat_f *const matrix2)
+{
+    ae_mat_f new_matrix;
+    if (m_matrix == NULL)
+        new_matrix = create_ae_mat_f(matrix1->rows, matrix1->cols);
+    else
+        new_matrix = create_temp_ae_mat_f(matrix1->rows, matrix1->cols);
+
+    if (matrix1->rows == 2)
+    {
+        AE_MATRIX_ELEM(new_matrix, 0, 0) = AE_MATRIX_P_ELEM(matrix1, 0, 0) * AE_MATRIX_P_ELEM(matrix2, 0, 0) + AE_MATRIX_P_ELEM(matrix1, 0, 1) * AE_MATRIX_P_ELEM(matrix2, 1, 0);
+        AE_MATRIX_ELEM(new_matrix, 0, 1) = AE_MATRIX_P_ELEM(matrix1, 0, 0) * AE_MATRIX_P_ELEM(matrix2, 0, 1) + AE_MATRIX_P_ELEM(matrix1, 0, 1) * AE_MATRIX_P_ELEM(matrix2, 1, 1);
+        AE_MATRIX_ELEM(new_matrix, 1, 0) = AE_MATRIX_P_ELEM(matrix1, 1, 0) * AE_MATRIX_P_ELEM(matrix2, 0, 0) + AE_MATRIX_P_ELEM(matrix1, 1, 1) * AE_MATRIX_P_ELEM(matrix2, 1, 0);
+        AE_MATRIX_ELEM(new_matrix, 1, 1) = AE_MATRIX_P_ELEM(matrix1, 1, 0) * AE_MATRIX_P_ELEM(matrix2, 0, 1) + AE_MATRIX_P_ELEM(matrix1, 1, 1) * AE_MATRIX_P_ELEM(matrix2, 1, 1);
+    }
+    else
+    {
+        uint32_t n = matrix1->rows / 2;
+        uint32_t offset = n * n * sizeof(double);
+
+        void *data = malloc(21 * offset);
+
+        ae_mat_f a = {.data = data, .rows = n, .cols = n};
+        ae_mat_f d = {.data = data + offset, .rows = n, .cols = n};
+        ae_mat_f e = {.data = data + 2 * offset, .rows = n, .cols = n};
+        ae_mat_f h = {.data = data + 3 * offset, .rows = n, .cols = n};
+
+        ae_mat_f s1 = {.data = data + 4 * offset, .rows = n, .cols = n};
+        ae_mat_f s2 = {.data = data + 5 * offset, .rows = n, .cols = n};
+        ae_mat_f s3 = {.data = data + 6 * offset, .rows = n, .cols = n};
+        ae_mat_f s4 = {.data = data + 7 * offset, .rows = n, .cols = n};
+        ae_mat_f s5 = {.data = data + 8 * offset, .rows = n, .cols = n};
+        ae_mat_f s6 = {.data = data + 9 * offset, .rows = n, .cols = n};
+        ae_mat_f s7 = {.data = data + 10 * offset, .rows = n, .cols = n};
+
+        ae_mat_f t1 = {.data = data + 11 * offset, .rows = n, .cols = n};
+        ae_mat_f t2 = {.data = data + 12 * offset, .rows = n, .cols = n};
+        ae_mat_f t3 = {.data = data + 13 * offset, .rows = n, .cols = n};
+        ae_mat_f t4 = {.data = data + 14 * offset, .rows = n, .cols = n};
+        ae_mat_f t5 = {.data = data + 15 * offset, .rows = n, .cols = n};
+        ae_mat_f t6 = {.data = data + 16 * offset, .rows = n, .cols = n};
+        ae_mat_f t7 = {.data = data + 17 * offset, .rows = n, .cols = n};
+        ae_mat_f t8 = {.data = data + 18 * offset, .rows = n, .cols = n};
+        ae_mat_f t9 = {.data = data + 19 * offset, .rows = n, .cols = n};
+        ae_mat_f t10 = {.data = data + 20 * offset, .rows = n, .cols = n};
+
+        for (uint32_t i = 0; i < n; i++)
+        {
+            for (uint32_t j = 0; j < n; j++)
+            {
+                AE_MATRIX_ELEM(a, i, j) = AE_MATRIX_P_ELEM(matrix1, i, j);
+                AE_MATRIX_ELEM(d, i, j) = AE_MATRIX_P_ELEM(matrix1, i + n, j + n);
+                AE_MATRIX_ELEM(e, i, j) = AE_MATRIX_P_ELEM(matrix2, i, j);
+                AE_MATRIX_ELEM(h, i, j) = AE_MATRIX_P_ELEM(matrix2, i + n, j + n);
+
+                AE_MATRIX_ELEM(t1, i, j) = AE_MATRIX_P_ELEM(matrix2, i, j + n) - AE_MATRIX_P_ELEM(matrix2, i + n, j + n);
+                AE_MATRIX_ELEM(t2, i, j) = AE_MATRIX_P_ELEM(matrix1, i, j) + AE_MATRIX_P_ELEM(matrix1, i, j + n);
+                AE_MATRIX_ELEM(t3, i, j) = AE_MATRIX_P_ELEM(matrix1, i + n, j) + AE_MATRIX_P_ELEM(matrix1, i + n, j + n);
+                AE_MATRIX_ELEM(t4, i, j) = AE_MATRIX_P_ELEM(matrix2, i + n, j) - AE_MATRIX_P_ELEM(matrix2, i, j);
+                AE_MATRIX_ELEM(t5, i, j) = AE_MATRIX_P_ELEM(matrix1, i, j) + AE_MATRIX_P_ELEM(matrix1, i + n, j + n);
+                AE_MATRIX_ELEM(t6, i, j) = AE_MATRIX_P_ELEM(matrix2, i, j) + AE_MATRIX_P_ELEM(matrix2, i + n, j + n);
+                AE_MATRIX_ELEM(t7, i, j) = AE_MATRIX_P_ELEM(matrix1, i, j + n) - AE_MATRIX_P_ELEM(matrix1, i + n, j + n);
+                AE_MATRIX_ELEM(t8, i, j) = AE_MATRIX_P_ELEM(matrix2, i + n, j) + AE_MATRIX_P_ELEM(matrix2, i + n, j + n);
+                AE_MATRIX_ELEM(t9, i, j) = AE_MATRIX_P_ELEM(matrix1, i, j) - AE_MATRIX_P_ELEM(matrix1, i + n, j);
+                AE_MATRIX_ELEM(t10, i, j) = AE_MATRIX_P_ELEM(matrix2, i, j) + AE_MATRIX_P_ELEM(matrix2, i, j + n);
+            }
+        }
+
+        dop_strassen_mult_by_mat_ae_mat_f(&s1, &a, &t1);
+        dop_strassen_mult_by_mat_ae_mat_f(&s2, &t2, &h);
+        dop_strassen_mult_by_mat_ae_mat_f(&s3, &t3, &e);
+        dop_strassen_mult_by_mat_ae_mat_f(&s4, &d, &t4);
+        dop_strassen_mult_by_mat_ae_mat_f(&s5, &t5, &t6);
+        dop_strassen_mult_by_mat_ae_mat_f(&s6, &t7, &t8);
+        dop_strassen_mult_by_mat_ae_mat_f(&s7, &t9, &t10);
+
+        for (uint32_t i = 0; i < n; i++)
+        {
+            for (uint32_t j = 0; j < n; j++)
+            {
+                AE_MATRIX_ELEM(new_matrix, i, j) = AE_MATRIX_ELEM(s5, i, j) + AE_MATRIX_ELEM(s6, i, j) + AE_MATRIX_ELEM(s4, i, j) - AE_MATRIX_ELEM(s2, i, j);
+                AE_MATRIX_ELEM(new_matrix, i, j + n) = AE_MATRIX_ELEM(s1, i, j) + AE_MATRIX_ELEM(s2, i, j);
+                AE_MATRIX_ELEM(new_matrix, i + n, j) = AE_MATRIX_ELEM(s3, i, j) + AE_MATRIX_ELEM(s4, i, j);
+                AE_MATRIX_ELEM(new_matrix, i + n, j + n) = AE_MATRIX_ELEM(s1, i, j) - AE_MATRIX_ELEM(s7, i, j) - AE_MATRIX_ELEM(s3, i, j) + AE_MATRIX_ELEM(s5, i, j);
+            }
+        }
+
+        free(data);
+    }
 
     if (m_matrix != NULL)
     {
@@ -257,6 +461,134 @@ ae_mat_f mult_by_mat2_ae_mat_f(ae_mat_f *const m_matrix, const ae_mat_f *const m
     }
 
     return new_matrix;
+}
+
+ae_mat_f mult_by_mat_ae_mat_f(ae_mat_f *const m_matrix, const ae_mat_f *const matrix1, const ae_mat_f *const matrix2)
+{
+    assert(matrix1->cols == matrix2->rows);
+
+    if (matrix1->cols < 64)
+        return mult_standart_ae_mat_f(m_matrix, matrix1, matrix2);
+    else if (matrix1->cols < 1024)
+        return mult_standart_ae_mat_f(m_matrix, matrix1, matrix2);
+    else
+    {
+        uint32_t dim;
+        {
+            uint32_t mc1 = find_next_power_of_2(matrix1->cols);
+            uint32_t mr1 = find_next_power_of_2(matrix1->rows);
+            uint32_t mc2 = find_next_power_of_2(matrix2->cols);
+            uint32_t mr2 = find_next_power_of_2(matrix2->rows);
+            uint32_t max_m1 = max_ae(mc1, mr1);
+            uint32_t max_m2 = max_ae(mc2, mr2);
+            dim = max_ae(max_m1, max_m2);
+        }
+
+        uint8_t u1 = matrix1->cols == dim && matrix1->rows == dim;
+        uint8_t u2 = matrix2->cols == dim && matrix2->rows == dim;
+        if (u1 == 0 && u2 == 0)
+        {
+            ae_mat_f new_matrix;
+            if (m_matrix == NULL)
+                new_matrix = create_ae_mat_f(matrix1->rows, matrix2->cols);
+            else
+                new_matrix = create_temp_ae_mat_f(matrix1->rows, matrix2->cols);
+            ae_mat_f new_matrix1 = resize_temp_ae_mat_f(matrix1, dim, dim);
+            ae_mat_f new_matrix2 = resize_temp_ae_mat_f(matrix2, dim, dim);
+
+            ae_mat_f result = create_temp_ae_mat_f(dim, dim);
+
+            result = strassen_mult_by_mat_ae_mat_f(&result, &new_matrix1, &new_matrix2);
+
+            for (uint32_t i = 0; i < new_matrix.rows; i++)
+                for (uint32_t j = 0; j < new_matrix.cols; j++)
+                    AE_MATRIX_ELEM(new_matrix, i, j) = AE_MATRIX_ELEM(result, i, j);
+
+            free(result.data);
+            free(new_matrix1.data);
+            free(new_matrix2.data);
+
+            if (m_matrix != NULL)
+            {
+                free(m_matrix->data);
+                if (m_matrix->gc_idx != -1)
+                {
+                    new_matrix.gc_idx = m_matrix->gc_idx;
+                    update_ae_gc(m_matrix->gc_idx, new_matrix.data);
+                }
+            }
+
+            return new_matrix;
+        }
+        else if (u1 == 0)
+        {
+            ae_mat_f new_matrix;
+            if (m_matrix == NULL)
+                new_matrix = create_ae_mat_f(matrix1->rows, matrix2->cols);
+            else
+                new_matrix = create_temp_ae_mat_f(matrix1->rows, matrix2->cols);
+            ae_mat_f new_matrix1 = resize_temp_ae_mat_f(matrix1, dim, dim);
+
+            ae_mat_f result = create_temp_ae_mat_f(dim, dim);
+
+            result = strassen_mult_by_mat_ae_mat_f(&result, &new_matrix1, matrix2);
+
+            for (uint32_t i = 0; i < new_matrix.rows; i++)
+                for (uint32_t j = 0; j < new_matrix.cols; j++)
+                    AE_MATRIX_ELEM(new_matrix, i, j) = AE_MATRIX_ELEM(result, i, j);
+
+            free(result.data);
+            free(new_matrix1.data);
+
+            if (m_matrix != NULL)
+            {
+                free(m_matrix->data);
+                if (m_matrix->gc_idx != -1)
+                {
+                    new_matrix.gc_idx = m_matrix->gc_idx;
+                    update_ae_gc(m_matrix->gc_idx, new_matrix.data);
+                }
+            }
+
+            return new_matrix;
+        }
+        else if (u2 == 0)
+        {
+            ae_mat_f new_matrix;
+            if (m_matrix == NULL)
+                new_matrix = create_ae_mat_f(matrix1->rows, matrix2->cols);
+            else
+                new_matrix = create_temp_ae_mat_f(matrix1->rows, matrix2->cols);
+            ae_mat_f new_matrix2 = resize_temp_ae_mat_f(matrix2, dim, dim);
+
+            ae_mat_f result = create_temp_ae_mat_f(dim, dim);
+
+            result = strassen_mult_by_mat_ae_mat_f(&result, matrix1, &new_matrix2);
+
+            for (uint32_t i = 0; i < new_matrix.rows; i++)
+                for (uint32_t j = 0; j < new_matrix.cols; j++)
+                    AE_MATRIX_ELEM(new_matrix, i, j) = AE_MATRIX_ELEM(result, i, j);
+
+            free(result.data);
+            free(new_matrix2.data);
+
+            if (m_matrix != NULL)
+            {
+                free(m_matrix->data);
+                if (m_matrix->gc_idx != -1)
+                {
+                    new_matrix.gc_idx = m_matrix->gc_idx;
+                    update_ae_gc(m_matrix->gc_idx, new_matrix.data);
+                }
+            }
+
+            return new_matrix;
+        }
+        else
+        {
+            return strassen_mult_by_mat_ae_mat_f(m_matrix, matrix1, matrix2);
+        }
+    }
 }
 
 ae_mat_f transpose_ae_mat_f(ae_mat_f *const m_matrix, const ae_mat_f *const matrix)
@@ -511,196 +843,6 @@ ae_mat_f adjugate_ae_mat_f(ae_mat_f *const m_matrix, const ae_mat_f *const matri
     }
 
     free(temp.data);
-
-    if (m_matrix != NULL)
-    {
-        free(m_matrix->data);
-        if (m_matrix->gc_idx != -1)
-        {
-            new_matrix.gc_idx = m_matrix->gc_idx;
-            update_ae_gc(m_matrix->gc_idx, new_matrix.data);
-        }
-    }
-
-    return new_matrix;
-}
-
-static void dop_strassen_mult_by_mat_ae_mat_f(ae_mat_f *const m_matrix, const ae_mat_f *const matrix1, const ae_mat_f *const matrix2)
-{
-    if (matrix1->rows == 2)
-    {
-        AE_MATRIX_P_ELEM(m_matrix, 0, 0) = AE_MATRIX_P_ELEM(matrix1, 0, 0) * AE_MATRIX_P_ELEM(matrix2, 0, 0) + AE_MATRIX_P_ELEM(matrix1, 0, 1) * AE_MATRIX_P_ELEM(matrix2, 1, 0);
-        AE_MATRIX_P_ELEM(m_matrix, 0, 1) = AE_MATRIX_P_ELEM(matrix1, 0, 0) * AE_MATRIX_P_ELEM(matrix2, 0, 1) + AE_MATRIX_P_ELEM(matrix1, 0, 1) * AE_MATRIX_P_ELEM(matrix2, 1, 1);
-        AE_MATRIX_P_ELEM(m_matrix, 1, 0) = AE_MATRIX_P_ELEM(matrix1, 1, 0) * AE_MATRIX_P_ELEM(matrix2, 0, 0) + AE_MATRIX_P_ELEM(matrix1, 1, 1) * AE_MATRIX_P_ELEM(matrix2, 1, 0);
-        AE_MATRIX_P_ELEM(m_matrix, 1, 1) = AE_MATRIX_P_ELEM(matrix1, 1, 0) * AE_MATRIX_P_ELEM(matrix2, 0, 1) + AE_MATRIX_P_ELEM(matrix1, 1, 1) * AE_MATRIX_P_ELEM(matrix2, 1, 1);
-    }
-    else
-    {
-        uint32_t n = matrix1->rows / 2;
-        uint32_t offset = n * n * sizeof(double);
-
-        void *data = malloc(21 * offset);
-
-        ae_mat_f a = {.data = data, .rows = n, .cols = n};
-        ae_mat_f d = {.data = data + offset, .rows = n, .cols = n};
-        ae_mat_f e = {.data = data + 2 * offset, .rows = n, .cols = n};
-        ae_mat_f h = {.data = data + 3 * offset, .rows = n, .cols = n};
-
-        ae_mat_f s1 = {.data = data + 4 * offset, .rows = n, .cols = n};
-        ae_mat_f s2 = {.data = data + 5 * offset, .rows = n, .cols = n};
-        ae_mat_f s3 = {.data = data + 6 * offset, .rows = n, .cols = n};
-        ae_mat_f s4 = {.data = data + 7 * offset, .rows = n, .cols = n};
-        ae_mat_f s5 = {.data = data + 8 * offset, .rows = n, .cols = n};
-        ae_mat_f s6 = {.data = data + 9 * offset, .rows = n, .cols = n};
-        ae_mat_f s7 = {.data = data + 10 * offset, .rows = n, .cols = n};
-
-        ae_mat_f t1 = {.data = data + 11 * offset, .rows = n, .cols = n};
-        ae_mat_f t2 = {.data = data + 12 * offset, .rows = n, .cols = n};
-        ae_mat_f t3 = {.data = data + 13 * offset, .rows = n, .cols = n};
-        ae_mat_f t4 = {.data = data + 14 * offset, .rows = n, .cols = n};
-        ae_mat_f t5 = {.data = data + 15 * offset, .rows = n, .cols = n};
-        ae_mat_f t6 = {.data = data + 16 * offset, .rows = n, .cols = n};
-        ae_mat_f t7 = {.data = data + 17 * offset, .rows = n, .cols = n};
-        ae_mat_f t8 = {.data = data + 18 * offset, .rows = n, .cols = n};
-        ae_mat_f t9 = {.data = data + 19 * offset, .rows = n, .cols = n};
-        ae_mat_f t10 = {.data = data + 20 * offset, .rows = n, .cols = n};
-
-        for (uint32_t i = 0; i < n; i++)
-        {
-            for (uint32_t j = 0; j < n; j++)
-            {
-                AE_MATRIX_ELEM(a, i, j) = AE_MATRIX_P_ELEM(matrix1, i, j);
-                AE_MATRIX_ELEM(d, i, j) = AE_MATRIX_P_ELEM(matrix1, i + n, j + n);
-                AE_MATRIX_ELEM(e, i, j) = AE_MATRIX_P_ELEM(matrix2, i, j);
-                AE_MATRIX_ELEM(h, i, j) = AE_MATRIX_P_ELEM(matrix2, i + n, j + n);
-
-                AE_MATRIX_ELEM(t1, i, j) = AE_MATRIX_P_ELEM(matrix2, i, j + n) - AE_MATRIX_P_ELEM(matrix2, i + n, j + n);
-                AE_MATRIX_ELEM(t2, i, j) = AE_MATRIX_P_ELEM(matrix1, i, j) + AE_MATRIX_P_ELEM(matrix1, i, j + n);
-                AE_MATRIX_ELEM(t3, i, j) = AE_MATRIX_P_ELEM(matrix1, i + n, j) + AE_MATRIX_P_ELEM(matrix1, i + n, j + n);
-                AE_MATRIX_ELEM(t4, i, j) = AE_MATRIX_P_ELEM(matrix2, i + n, j) - AE_MATRIX_P_ELEM(matrix2, i, j);
-                AE_MATRIX_ELEM(t5, i, j) = AE_MATRIX_P_ELEM(matrix1, i, j) + AE_MATRIX_P_ELEM(matrix1, i + n, j + n);
-                AE_MATRIX_ELEM(t6, i, j) = AE_MATRIX_P_ELEM(matrix2, i, j) + AE_MATRIX_P_ELEM(matrix2, i + n, j + n);
-                AE_MATRIX_ELEM(t7, i, j) = AE_MATRIX_P_ELEM(matrix1, i, j + n) - AE_MATRIX_P_ELEM(matrix1, i + n, j + n);
-                AE_MATRIX_ELEM(t8, i, j) = AE_MATRIX_P_ELEM(matrix2, i + n, j) + AE_MATRIX_P_ELEM(matrix2, i + n, j + n);
-                AE_MATRIX_ELEM(t9, i, j) = AE_MATRIX_P_ELEM(matrix1, i, j) - AE_MATRIX_P_ELEM(matrix1, i + n, j);
-                AE_MATRIX_ELEM(t10, i, j) = AE_MATRIX_P_ELEM(matrix2, i, j) + AE_MATRIX_P_ELEM(matrix2, i, j + n);
-            }
-        }
-
-        dop_strassen_mult_by_mat_ae_mat_f(&s1, &a, &t1);
-        dop_strassen_mult_by_mat_ae_mat_f(&s2, &t2, &h);
-        dop_strassen_mult_by_mat_ae_mat_f(&s3, &t3, &e);
-        dop_strassen_mult_by_mat_ae_mat_f(&s4, &d, &t4);
-        dop_strassen_mult_by_mat_ae_mat_f(&s5, &t5, &t6);
-        dop_strassen_mult_by_mat_ae_mat_f(&s6, &t7, &t8);
-        dop_strassen_mult_by_mat_ae_mat_f(&s7, &t9, &t10);
-
-        for (uint32_t i = 0; i < n; i++)
-        {
-            for (uint32_t j = 0; j < n; j++)
-            {
-                AE_MATRIX_P_ELEM(m_matrix, i, j) = AE_MATRIX_ELEM(s5, i, j) + AE_MATRIX_ELEM(s6, i, j) + AE_MATRIX_ELEM(s4, i, j) - AE_MATRIX_ELEM(s2, i, j);
-                AE_MATRIX_P_ELEM(m_matrix, i, j + n) = AE_MATRIX_ELEM(s1, i, j) + AE_MATRIX_ELEM(s2, i, j);
-                AE_MATRIX_P_ELEM(m_matrix, i + n, j) = AE_MATRIX_ELEM(s3, i, j) + AE_MATRIX_ELEM(s4, i, j);
-                AE_MATRIX_P_ELEM(m_matrix, i + n, j + n) = AE_MATRIX_ELEM(s1, i, j) - AE_MATRIX_ELEM(s7, i, j) - AE_MATRIX_ELEM(s3, i, j) + AE_MATRIX_ELEM(s5, i, j);
-            }
-        }
-
-        free(data);
-    }
-
-    return;
-}
-
-ae_mat_f strassen_mult_by_mat_ae_mat_f(ae_mat_f *const m_matrix, const ae_mat_f *const matrix1, const ae_mat_f *const matrix2)
-{
-    ae_mat_f new_matrix;
-    if (m_matrix == NULL)
-        new_matrix = create_ae_mat_f(matrix1->rows, matrix1->cols);
-    else
-        new_matrix = create_temp_ae_mat_f(matrix1->rows, matrix1->cols);
-
-    if (matrix1->rows == 2)
-    {
-        AE_MATRIX_ELEM(new_matrix, 0, 0) = AE_MATRIX_P_ELEM(matrix1, 0, 0) * AE_MATRIX_P_ELEM(matrix2, 0, 0) + AE_MATRIX_P_ELEM(matrix1, 0, 1) * AE_MATRIX_P_ELEM(matrix2, 1, 0);
-        AE_MATRIX_ELEM(new_matrix, 0, 1) = AE_MATRIX_P_ELEM(matrix1, 0, 0) * AE_MATRIX_P_ELEM(matrix2, 0, 1) + AE_MATRIX_P_ELEM(matrix1, 0, 1) * AE_MATRIX_P_ELEM(matrix2, 1, 1);
-        AE_MATRIX_ELEM(new_matrix, 1, 0) = AE_MATRIX_P_ELEM(matrix1, 1, 0) * AE_MATRIX_P_ELEM(matrix2, 0, 0) + AE_MATRIX_P_ELEM(matrix1, 1, 1) * AE_MATRIX_P_ELEM(matrix2, 1, 0);
-        AE_MATRIX_ELEM(new_matrix, 1, 1) = AE_MATRIX_P_ELEM(matrix1, 1, 0) * AE_MATRIX_P_ELEM(matrix2, 0, 1) + AE_MATRIX_P_ELEM(matrix1, 1, 1) * AE_MATRIX_P_ELEM(matrix2, 1, 1);
-    }
-    else
-    {
-        uint32_t n = matrix1->rows / 2;
-        uint32_t offset = n * n * sizeof(double);
-
-        void *data = malloc(21 * offset);
-
-        ae_mat_f a = {.data = data, .rows = n, .cols = n};
-        ae_mat_f d = {.data = data + offset, .rows = n, .cols = n};
-        ae_mat_f e = {.data = data + 2 * offset, .rows = n, .cols = n};
-        ae_mat_f h = {.data = data + 3 * offset, .rows = n, .cols = n};
-
-        ae_mat_f s1 = {.data = data + 4 * offset, .rows = n, .cols = n};
-        ae_mat_f s2 = {.data = data + 5 * offset, .rows = n, .cols = n};
-        ae_mat_f s3 = {.data = data + 6 * offset, .rows = n, .cols = n};
-        ae_mat_f s4 = {.data = data + 7 * offset, .rows = n, .cols = n};
-        ae_mat_f s5 = {.data = data + 8 * offset, .rows = n, .cols = n};
-        ae_mat_f s6 = {.data = data + 9 * offset, .rows = n, .cols = n};
-        ae_mat_f s7 = {.data = data + 10 * offset, .rows = n, .cols = n};
-
-        ae_mat_f t1 = {.data = data + 11 * offset, .rows = n, .cols = n};
-        ae_mat_f t2 = {.data = data + 12 * offset, .rows = n, .cols = n};
-        ae_mat_f t3 = {.data = data + 13 * offset, .rows = n, .cols = n};
-        ae_mat_f t4 = {.data = data + 14 * offset, .rows = n, .cols = n};
-        ae_mat_f t5 = {.data = data + 15 * offset, .rows = n, .cols = n};
-        ae_mat_f t6 = {.data = data + 16 * offset, .rows = n, .cols = n};
-        ae_mat_f t7 = {.data = data + 17 * offset, .rows = n, .cols = n};
-        ae_mat_f t8 = {.data = data + 18 * offset, .rows = n, .cols = n};
-        ae_mat_f t9 = {.data = data + 19 * offset, .rows = n, .cols = n};
-        ae_mat_f t10 = {.data = data + 20 * offset, .rows = n, .cols = n};
-
-        for (uint32_t i = 0; i < n; i++)
-        {
-            for (uint32_t j = 0; j < n; j++)
-            {
-                AE_MATRIX_ELEM(a, i, j) = AE_MATRIX_P_ELEM(matrix1, i, j);
-                AE_MATRIX_ELEM(d, i, j) = AE_MATRIX_P_ELEM(matrix1, i + n, j + n);
-                AE_MATRIX_ELEM(e, i, j) = AE_MATRIX_P_ELEM(matrix2, i, j);
-                AE_MATRIX_ELEM(h, i, j) = AE_MATRIX_P_ELEM(matrix2, i + n, j + n);
-
-                AE_MATRIX_ELEM(t1, i, j) = AE_MATRIX_P_ELEM(matrix2, i, j + n) - AE_MATRIX_P_ELEM(matrix2, i + n, j + n);
-                AE_MATRIX_ELEM(t2, i, j) = AE_MATRIX_P_ELEM(matrix1, i, j) + AE_MATRIX_P_ELEM(matrix1, i, j + n);
-                AE_MATRIX_ELEM(t3, i, j) = AE_MATRIX_P_ELEM(matrix1, i + n, j) + AE_MATRIX_P_ELEM(matrix1, i + n, j + n);
-                AE_MATRIX_ELEM(t4, i, j) = AE_MATRIX_P_ELEM(matrix2, i + n, j) - AE_MATRIX_P_ELEM(matrix2, i, j);
-                AE_MATRIX_ELEM(t5, i, j) = AE_MATRIX_P_ELEM(matrix1, i, j) + AE_MATRIX_P_ELEM(matrix1, i + n, j + n);
-                AE_MATRIX_ELEM(t6, i, j) = AE_MATRIX_P_ELEM(matrix2, i, j) + AE_MATRIX_P_ELEM(matrix2, i + n, j + n);
-                AE_MATRIX_ELEM(t7, i, j) = AE_MATRIX_P_ELEM(matrix1, i, j + n) - AE_MATRIX_P_ELEM(matrix1, i + n, j + n);
-                AE_MATRIX_ELEM(t8, i, j) = AE_MATRIX_P_ELEM(matrix2, i + n, j) + AE_MATRIX_P_ELEM(matrix2, i + n, j + n);
-                AE_MATRIX_ELEM(t9, i, j) = AE_MATRIX_P_ELEM(matrix1, i, j) - AE_MATRIX_P_ELEM(matrix1, i + n, j);
-                AE_MATRIX_ELEM(t10, i, j) = AE_MATRIX_P_ELEM(matrix2, i, j) + AE_MATRIX_P_ELEM(matrix2, i, j + n);
-            }
-        }
-
-        dop_strassen_mult_by_mat_ae_mat_f(&s1, &a, &t1);
-        dop_strassen_mult_by_mat_ae_mat_f(&s2, &t2, &h);
-        dop_strassen_mult_by_mat_ae_mat_f(&s3, &t3, &e);
-        dop_strassen_mult_by_mat_ae_mat_f(&s4, &d, &t4);
-        dop_strassen_mult_by_mat_ae_mat_f(&s5, &t5, &t6);
-        dop_strassen_mult_by_mat_ae_mat_f(&s6, &t7, &t8);
-        dop_strassen_mult_by_mat_ae_mat_f(&s7, &t9, &t10);
-
-        for (uint32_t i = 0; i < n; i++)
-        {
-            for (uint32_t j = 0; j < n; j++)
-            {
-                AE_MATRIX_ELEM(new_matrix, i, j) = AE_MATRIX_ELEM(s5, i, j) + AE_MATRIX_ELEM(s6, i, j) + AE_MATRIX_ELEM(s4, i, j) - AE_MATRIX_ELEM(s2, i, j);
-                AE_MATRIX_ELEM(new_matrix, i, j + n) = AE_MATRIX_ELEM(s1, i, j) + AE_MATRIX_ELEM(s2, i, j);
-                AE_MATRIX_ELEM(new_matrix, i + n, j) = AE_MATRIX_ELEM(s3, i, j) + AE_MATRIX_ELEM(s4, i, j);
-                AE_MATRIX_ELEM(new_matrix, i + n, j + n) = AE_MATRIX_ELEM(s1, i, j) - AE_MATRIX_ELEM(s7, i, j) - AE_MATRIX_ELEM(s3, i, j) + AE_MATRIX_ELEM(s5, i, j);
-            }
-        }
-
-        free(data);
-    }
 
     if (m_matrix != NULL)
     {

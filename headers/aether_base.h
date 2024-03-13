@@ -1,6 +1,7 @@
 #ifndef __AETHER_BASE__
 #define __AETHER_BASE__
 
+#include "aether_utils.h"
 #include "aether_gc.h"
 
 #define INIT_AE_BASE                                            \
@@ -34,27 +35,6 @@ typedef enum
     AE_BASE_RECOUNT,
     AE_RESIZE
 } AE_BASE_MEM;
-
-inline size_t find_next_power_of_2(size_t n)
-{
-    if (n == 0)
-        return 1;
-    else if (n == 1)
-        return 2;
-    else
-    {
-        n--;
-
-        n |= n >> 1;
-        n |= n >> 2;
-        n |= n >> 4;
-        n |= n >> 8;
-        n |= n >> 16;
-        n |= n >> 32;
-
-        return ++n;
-    }
-}
 
 inline void check_realloc_ae_base(ae_base *const base, const size_t *const data_size, size_t new_size, AE_BASE_MEM type)
 {
