@@ -1,7 +1,5 @@
 #include "aether_base.h"
 
-extern inline size_t find_next_power_of_2(size_t n);
-
 extern inline void check_realloc_ae_base(ae_base *const base, const size_t *const data_size, size_t new_size, AE_BASE_MEM type);
 
 extern inline void create_gc_ae_base(ae_base *const base, const size_t *const data_size);

@@ -5,9 +5,16 @@
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>
 
 #define AE_MATRIX_ELEM(m, r, c) (m.data[(c) + (r) * m.cols])
 #define AE_MATRIX_P_ELEM(m, r, c) (m->data[(c) + (r) * m->cols])
+
+#define AE_X 0
+#define AE_Y 1
+#define AE_Z 2
+#define AE_VEC3_ELEM(v, e) (v.data[e])
+#define AE_VEC3_P_ELEM(v, e) (v->data[e])
 
 #define AE_FLOAT_PRECISION 1e6
 
@@ -188,21 +195,64 @@ ae_mat_f mult_by_sclr_ae_mat_f(ae_mat_f *const m_matrix, const ae_mat_f *const m
     return new_matrix;
 }
 
-static inline ae_mat_f resize_temp_ae_mat_f(const ae_mat_f *const matrix, const uint32_t rows, const uint32_t cols)
+ae_mat_f resize_temp_ae_mat_f(ae_mat_f *const m_matrix, const ae_mat_f *const matrix, const uint32_t rows, const uint32_t cols)
 {
-    ae_mat_f new_matrix = create_temp_ae_mat_f(rows, cols);
+    ae_mat_f new_matrix;
+    if (m_matrix == NULL)
+        new_matrix = create_ae_mat_f(rows, cols);
+    else
+        new_matrix = create_temp_ae_mat_f(rows, cols);
 
-    for (uint32_t i = 0; i < matrix->rows; i++)
+    if (matrix->cols == cols && matrix->rows == rows)
     {
-        for (uint32_t j = 0; j < matrix->cols; j++)
-            AE_MATRIX_ELEM(new_matrix, i, j) = AE_MATRIX_P_ELEM(matrix, i, j);
-        for (uint32_t j = matrix->cols; j < new_matrix.cols; j++)
-            AE_MATRIX_ELEM(new_matrix, i, j) = 0.0;
+        return *matrix;
+    }
+    else if (matrix->cols < cols && matrix->rows < rows)
+    {
+        for (uint32_t i = 0; i < matrix->rows; i++)
+        {
+            for (uint32_t j = 0; j < matrix->cols; j++)
+                AE_MATRIX_ELEM(new_matrix, i, j) = AE_MATRIX_P_ELEM(matrix, i, j);
+            for (uint32_t j = matrix->cols; j < cols; j++)
+                AE_MATRIX_ELEM(new_matrix, i, j) = 0.0;
+        }
+
+        for (uint32_t i = matrix->rows; i < new_matrix.rows; i++)
+            for (uint32_t j = 0; j < cols; j++)
+                AE_MATRIX_ELEM(new_matrix, i, j) = 0.0;
+    }
+    else if (matrix->cols < cols)
+    {
+        for (uint32_t i = 0; i < rows; i++)
+        {
+            for (uint32_t j = 0; j < matrix->cols; j++)
+                AE_MATRIX_ELEM(new_matrix, i, j) = AE_MATRIX_P_ELEM(matrix, i, j);
+            for (uint32_t j = matrix->cols; j < cols; j++)
+                AE_MATRIX_ELEM(new_matrix, i, j) = 0.0;
+        }
+    }
+    else if (matrix->rows < rows)
+    {
+        for (uint32_t i = 0; i < matrix->rows; i++)
+        {
+            for (uint32_t j = 0; j < cols; j++)
+                AE_MATRIX_ELEM(new_matrix, i, j) = AE_MATRIX_P_ELEM(matrix, i, j);
+        }
+
+        for (uint32_t i = matrix->rows; i < new_matrix.rows; i++)
+            for (uint32_t j = 0; j < cols; j++)
+                AE_MATRIX_ELEM(new_matrix, i, j) = 0.0;
     }
 
-    for (uint32_t i = matrix->rows; i < new_matrix.rows; i++)
-        for (uint32_t j = 0; j < new_matrix.cols; j++)
-            AE_MATRIX_ELEM(new_matrix, i, j) = 0.0;
+    if (m_matrix != NULL)
+    {
+        free(m_matrix->data);
+        if (m_matrix->gc_idx != -1)
+        {
+            new_matrix.gc_idx = m_matrix->gc_idx;
+            update_ae_gc(m_matrix->gc_idx, new_matrix.data);
+        }
+    }
 
     return new_matrix;
 }
@@ -493,8 +543,8 @@ ae_mat_f mult_by_mat_ae_mat_f(ae_mat_f *const m_matrix, const ae_mat_f *const ma
                 new_matrix = create_ae_mat_f(matrix1->rows, matrix2->cols);
             else
                 new_matrix = create_temp_ae_mat_f(matrix1->rows, matrix2->cols);
-            ae_mat_f new_matrix1 = resize_temp_ae_mat_f(matrix1, dim, dim);
-            ae_mat_f new_matrix2 = resize_temp_ae_mat_f(matrix2, dim, dim);
+            ae_mat_f new_matrix1 = resize_temp_ae_mat_f(NULL, matrix1, dim, dim);
+            ae_mat_f new_matrix2 = resize_temp_ae_mat_f(NULL, matrix2, dim, dim);
 
             ae_mat_f result = create_temp_ae_mat_f(dim, dim);
 
@@ -527,7 +577,7 @@ ae_mat_f mult_by_mat_ae_mat_f(ae_mat_f *const m_matrix, const ae_mat_f *const ma
                 new_matrix = create_ae_mat_f(matrix1->rows, matrix2->cols);
             else
                 new_matrix = create_temp_ae_mat_f(matrix1->rows, matrix2->cols);
-            ae_mat_f new_matrix1 = resize_temp_ae_mat_f(matrix1, dim, dim);
+            ae_mat_f new_matrix1 = resize_temp_ae_mat_f(NULL, matrix1, dim, dim);
 
             ae_mat_f result = create_temp_ae_mat_f(dim, dim);
 
@@ -559,7 +609,7 @@ ae_mat_f mult_by_mat_ae_mat_f(ae_mat_f *const m_matrix, const ae_mat_f *const ma
                 new_matrix = create_ae_mat_f(matrix1->rows, matrix2->cols);
             else
                 new_matrix = create_temp_ae_mat_f(matrix1->rows, matrix2->cols);
-            ae_mat_f new_matrix2 = resize_temp_ae_mat_f(matrix2, dim, dim);
+            ae_mat_f new_matrix2 = resize_temp_ae_mat_f(NULL, matrix2, dim, dim);
 
             ae_mat_f result = create_temp_ae_mat_f(dim, dim);
 
@@ -843,6 +893,76 @@ ae_mat_f adjugate_ae_mat_f(ae_mat_f *const m_matrix, const ae_mat_f *const matri
     }
 
     free(temp.data);
+
+    if (m_matrix != NULL)
+    {
+        free(m_matrix->data);
+        if (m_matrix->gc_idx != -1)
+        {
+            new_matrix.gc_idx = m_matrix->gc_idx;
+            update_ae_gc(m_matrix->gc_idx, new_matrix.data);
+        }
+    }
+
+    return new_matrix;
+}
+
+ae_mat_f v3_cross_ae_mat_f(ae_mat_f *const m_matrix, const ae_mat_f *const matrix1, const ae_mat_f *const matrix2)
+{
+    assert(matrix1->cols == 1 && matrix1->rows == 3 && matrix2->cols == 1 && matrix2->rows == 3);
+
+    ae_mat_f new_matrix;
+    if (m_matrix == NULL)
+        new_matrix = create_ae_mat_f(matrix1->rows, matrix2->cols);
+    else
+        new_matrix = create_temp_ae_mat_f(matrix1->rows, matrix2->cols);
+
+    AE_VEC3_ELEM(new_matrix, AE_X) = AE_VEC3_P_ELEM(matrix1, AE_Y) * AE_VEC3_P_ELEM(matrix2, AE_Z) - AE_VEC3_P_ELEM(matrix1, AE_Z) * AE_VEC3_P_ELEM(matrix2, AE_Y);
+    AE_VEC3_ELEM(new_matrix, AE_Y) = AE_VEC3_P_ELEM(matrix1, AE_Z) * AE_VEC3_P_ELEM(matrix2, AE_X) - AE_VEC3_P_ELEM(matrix1, AE_X) * AE_VEC3_P_ELEM(matrix2, AE_Z);
+    AE_VEC3_ELEM(new_matrix, AE_Z) = AE_VEC3_P_ELEM(matrix1, AE_X) * AE_VEC3_P_ELEM(matrix2, AE_Y) - AE_VEC3_P_ELEM(matrix1, AE_Y) * AE_VEC3_P_ELEM(matrix2, AE_X);
+
+    if (m_matrix != NULL)
+    {
+        free(m_matrix->data);
+        if (m_matrix->gc_idx != -1)
+        {
+            new_matrix.gc_idx = m_matrix->gc_idx;
+            update_ae_gc(m_matrix->gc_idx, new_matrix.data);
+        }
+    }
+
+    return new_matrix;
+}
+
+double v3_dot_ae_mat_f(const ae_mat_f *const matrix1, const ae_mat_f *const matrix2)
+{
+    assert(matrix1->cols == 1 && matrix1->rows == 3 && matrix2->cols == 1 && matrix2->rows == 3);
+
+    return AE_VEC3_P_ELEM(matrix1, AE_X) * AE_VEC3_P_ELEM(matrix2, AE_X) + AE_VEC3_P_ELEM(matrix1, AE_Y) * AE_VEC3_P_ELEM(matrix2, AE_Y) + AE_VEC3_P_ELEM(matrix1, AE_Z) * AE_VEC3_P_ELEM(matrix2, AE_Z);
+}
+
+double v3_norm_ae_mat_f(const ae_mat_f *const matrix)
+{
+    assert(matrix->cols == 1 && matrix->rows == 3);
+
+    return sqrt(AE_VEC3_P_ELEM(matrix, AE_X)*AE_VEC3_P_ELEM(matrix, AE_X) + AE_VEC3_P_ELEM(matrix, AE_Y) * AE_VEC3_P_ELEM(matrix, AE_Y) + AE_VEC3_P_ELEM(matrix, AE_Z) * AE_VEC3_P_ELEM(matrix, AE_Z));
+}
+
+ae_mat_f v3_normalize_ae_mat_f(ae_mat_f *const m_matrix, const ae_mat_f *const matrix)
+{
+    assert(matrix->cols == 1 && matrix->rows == 3);
+
+    ae_mat_f new_matrix;
+    if (m_matrix == NULL)
+        new_matrix = create_ae_mat_f(matrix->rows, matrix->cols);
+    else
+        new_matrix = create_temp_ae_mat_f(matrix->rows, matrix->cols);
+
+    double norm = sqrt(AE_VEC3_P_ELEM(matrix, AE_X)*AE_VEC3_P_ELEM(matrix, AE_X) + AE_VEC3_P_ELEM(matrix, AE_Y) * AE_VEC3_P_ELEM(matrix, AE_Y) + AE_VEC3_P_ELEM(matrix, AE_Z) * AE_VEC3_P_ELEM(matrix, AE_Z));
+
+    AE_VEC3_ELEM(new_matrix, AE_X) = AE_VEC3_P_ELEM(matrix, AE_X) / norm;
+    AE_VEC3_ELEM(new_matrix, AE_Y) = AE_VEC3_P_ELEM(matrix, AE_Y) / norm;
+    AE_VEC3_ELEM(new_matrix, AE_Z) = AE_VEC3_P_ELEM(matrix, AE_Z) / norm;
 
     if (m_matrix != NULL)
     {
