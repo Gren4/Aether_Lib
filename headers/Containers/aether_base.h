@@ -156,6 +156,7 @@ inline void free_ae_base(ae_base *const base)
 #ifdef DEBUG_AE
     printf("Freed memory at address %p\n", base->memory);
 #endif
+    assert(base->memory != NULL);
     free(base->memory);
     base->quant = 0;
     base->max_quant = 0;

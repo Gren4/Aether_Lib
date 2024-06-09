@@ -133,7 +133,9 @@ ae_map create_ae_map(size_t data_size, size_t (*func)(const char *, size_t))
 
 void free_ae_map(ae_map *const map)
 {
+    assert(map != NULL);
     free_ae_base(&map->data);
+    map->data_size = 0;
 
     return;
 }

@@ -27,10 +27,12 @@ ae_deq create_ae_deq(size_t data_size)
 
 void free_ae_deq(ae_deq *const deque)
 {
-    if (deque->pointers.memory != NULL)
-        free_ae_base(&deque->pointers);
-    if (deque->blocks.memory != NULL)
-        free_ae_base(&deque->blocks);
+    assert(deque != NULL);
+    assert(deque->pointers.memory != NULL);
+    free_ae_base(&deque->pointers);
+    assert(deque->blocks.memory != NULL);
+    free_ae_base(&deque->blocks);
+    deque->data_size = 0;
 
     return;
 }

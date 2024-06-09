@@ -30,8 +30,8 @@ ae_vec create_ae_vec(size_t data_size, size_t quant)
 
 void free_ae_vec(ae_vec *const vector)
 {
+    assert(vector != NULL);
     free_ae_base(&vector->data);
-    vector->data.memory = NULL;
     vector->data_size = 0;
 
     return;
