@@ -1,8 +1,6 @@
 #ifndef __AETHER_CONVOLUTON__
 #define __AETHER_CONVOLUTON__
 
-#include "aether_nn_defines.h"
-#include "aether_tensor.h"
 #include "aether_layers.h"
 #include "aether_activation_functions.h"
 

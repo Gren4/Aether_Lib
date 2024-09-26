@@ -22,7 +22,7 @@ _AE_START_MAIN
         .stride = {2,2},
         .padding = {1,1},
         .dilation = {1,1},
-        .activation_function = Sigmoid_ae_af
+        .activation_function = TanH_ae_af
     };
 
     aether_conv2d conv2d_2 = {
@@ -32,7 +32,7 @@ _AE_START_MAIN
         .stride = {2,2},
         .padding = {1,1},
         .dilation = {1,1},
-        .activation_function = Sigmoid_ae_af
+        .activation_function = TanH_ae_af
     };
 
     aether_conv_tr2d conv_tr2d_1 = {
@@ -43,7 +43,7 @@ _AE_START_MAIN
         .padding = {1,1},
         .output_padding = {0,0},
         .dilation = {1,1},
-        .activation_function = Sigmoid_ae_af
+        .activation_function = TanH_ae_af
     };
 
     aether_conv_tr2d conv_tr2d_2 = {
@@ -54,7 +54,7 @@ _AE_START_MAIN
         .padding = {1,1},
         .output_padding = {0,0},
         .dilation = {1,1},
-        .activation_function = Sigmoid_ae_af
+        .activation_function = TanH_ae_af
     };
     float in[] = {
         1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
@@ -151,7 +151,7 @@ _AE_START_MAIN
                 {
                     for (j = 0; j < seq.output->width; j++)
                     {
-                        unsigned int color = (unsigned int)(255 * *get_element_ae_tensor(seq.output, 0, 0, i, j));
+                        unsigned int color = (unsigned int)(127.5 * (*get_element_ae_tensor(seq.output, 0, 0, i, j) + 1.0));
                         SDL_SetRenderDrawColor(renderer, color, color, color, 0xFF);
                         rect.x = j * rect.w;
                         rect.y = i * rect.h;
@@ -169,7 +169,7 @@ _AE_START_MAIN
             {
                 for (j = 0; j < seq.output->width; j++)
                 {
-                    unsigned int color = (unsigned int)(255 * *get_element_ae_tensor(seq.output, 0, 0, i, j));
+                    unsigned int color = (unsigned int)(127.5 * (*get_element_ae_tensor(seq.output, 0, 0, i, j) + 1.0));
                     SDL_SetRenderDrawColor(renderer, color, color, color, 0xFF);
                     rect.x = j * rect.w;
                     rect.y = i * rect.h;

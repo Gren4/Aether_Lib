@@ -114,6 +114,8 @@ void forward_ae_conv2d(const aether_nn_config *const config, void *layer)
 {
     aether_conv2d *conv = (aether_conv2d *)layer;
 
+    assert(conv->input->filters == conv->in_channels);
+
     const uint32_t height_in = conv->input->height;
     const uint32_t width_in = conv->input->width;
 
@@ -167,6 +169,8 @@ void forward_ae_conv2d(const aether_nn_config *const config, void *layer)
 void backward_ae_conv2d(const aether_nn_config *const config, void *layer)
 {
     aether_conv2d *conv = (aether_conv2d *)layer;
+
+    assert(conv->gradient_in->filters == conv->out_channels);
 
     const uint32_t height_in = conv->input->height;
     const uint32_t width_in = conv->input->width;

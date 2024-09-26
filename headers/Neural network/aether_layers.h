@@ -3,6 +3,7 @@
 
 #include "aether_nn_defines.h"
 #include "aether_tensor.h"
+#include "assert.h"
 
 typedef struct aether_layer
 {
